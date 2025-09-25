@@ -14,17 +14,57 @@ from dotenv import load_dotenv
 import ollama
 import random
 import threading
+from typing import List
+
+# ========================================================
+#                    HELPER CLASSES
+# ========================================================
 
 class VideoGame:
     """Represents a video game with all its metadata"""
     
-    def __init__(self, name: str, description: str, genres: list[str], platforms: list[str], rating: float, release_date: str):
+    def __init__(self, name: str, release_date: str, description: str, rating: float, genres: list[str], platforms: list[str]):
         self.name = name
+        self.release_date = release_date
         self.description = description
+        self.rating = rating
         self.genres = genres
         self.platforms = platforms
-        self.rating = rating
-        self.release_date = release_date
+
+    @staticmethod
+    def required_parameters() -> List[str]:
+        return [
+            "name",
+            "description_raw"
+        ]
+
+    @classmethod
+    def from_api_data(cls, raw_data: dict):
+        """Create a VideoGame instance from raw API data. Returns None if required fields are missing."""
+        # Sanity check that required fields are present
+        for required_parameter in cls.required_parameters():
+            if not raw_data.get(required_parameter):
+                return None
+
+        # Extract and clean up fields that need to be reformatted
+        genres_data = raw_data.get("genres", [])
+        clean_genres = [genre.get("name", "") for genre in genres_data if genre.get("name")]
+
+        platforms_data = raw_data.get("parent_platforms", [])
+        clean_platforms = [
+            platform.get("platform", {}).get("name", "") 
+            for platform in platforms_data 
+            if platform.get("platform", {}).get("name")
+        ]
+        
+        return cls(
+            name=raw_data.get("name"),
+            release_date=raw_data.get("released"),
+            description=raw_data.get("description_raw"),
+            rating=raw_data.get("rating"),
+            genres=clean_genres,
+            platforms=clean_platforms
+        )
 
     def format_for_llm(self) -> str:
         """Format game data as a string for LLM processing"""
@@ -40,7 +80,10 @@ Genres: {self.genres}
 
 Platforms: {self.platforms}"""
 
-# Application constants
+# ========================================================
+#                      CONSTANTS
+# ========================================================
+
 WELCOME_MESSAGE = r"""
 =====================================================================
 
@@ -83,6 +126,10 @@ Behavior Guidelines:
 - Avoid huge blocks of text, this should be easy to read
 """
 
+# ========================================================
+#                        GLOBALS
+# ========================================================
+
 # Load environment variables
 load_dotenv(override=True)
 RAWG_API_KEY = os.getenv('RAWG_API_KEY')
@@ -107,6 +154,10 @@ THINKING_PHRASES = [
     "Hang on let me pull up my old blog post on this",
     "Ultimate move has gotten off cooldown"
 ]
+
+# ========================================================
+#                         CODE
+# ========================================================
 
 def main():
     """Main application loop - handles user interaction and game review workflow"""
@@ -142,46 +193,23 @@ def process_game_request(game_name: str) -> None:
         game_data = fetch_complete_game_data(game_name)
         
         # Generate and display review
-        if game_data:
-            generate_and_display_review(game_data)
-        else:
-            generate_and_display_review(None)  # Game not found
+        generate_and_display_review(game_data)
             
     finally:
         # Always stop progress indicator
         stop_progress_indicator()
 
+# ========================================================
+#                  INPUT COLLECTION
+# ========================================================
+
 def get_user_input() -> str:
     """Get game name input from user"""
     return input("\nWhat video game do you want to learn about? (exit to quit): ")
 
-def is_exit_command(user_input: str) -> bool:
-    """Check if user wants to exit the application"""
-    return user_input.lower().strip() in {"exit", "quit"}
-
-def show_thinking_phrase() -> None:
-    """Display a random thinking phrase to show personality"""
-    phrase = random.choice(THINKING_PHRASES)
-    print(f"\n{phrase}", end="", flush=True)
-
-def show_goodbye_message() -> None:
-    """Display farewell message to user"""
-    print("\nUntil next time, gamer 🫡\n")
-
-def start_progress_indicator() -> None:
-    """Start the progress dots thread for visual feedback"""
-    global progress_event, progress_thread
-    progress_event = threading.Event()
-    progress_thread = threading.Thread(target=show_progress_dots, args=(progress_event,))
-    progress_thread.daemon = True
-    progress_thread.start()
-
-def stop_progress_indicator() -> None:
-    """Stop the progress dots thread"""
-    global progress_event, progress_thread
-    if progress_event and progress_thread:
-        progress_event.set()
-        progress_thread.join(timeout=1)
+# ========================================================
+#                      API CALLS
+# ========================================================
 
 def fetch_complete_game_data(game_name: str) -> VideoGame | None:
     """Fetch complete game data from RAWG API - search then get details"""
@@ -196,7 +224,7 @@ def fetch_complete_game_data(game_name: str) -> VideoGame | None:
         return None
     
     # Step 3: Parse and return structured game data
-    return parse_raw_game_data(game_details)
+    return VideoGame.from_api_data(game_details)
 
 def search_games_by_name(game_name: str) -> dict | None:
     """Search for games using RAWG API search endpoint"""
@@ -244,48 +272,10 @@ def fetch_game_details(search_results: dict) -> dict | None:
         print(f"\nError fetching game details: {e}")
         return None
 
-def parse_raw_game_data(raw_data: dict) -> VideoGame | None:
-    """Parse raw API data into a structured VideoGame object"""
-    # Extract required fields
-    name = raw_data.get("name")
-    description = raw_data.get("description_raw")
-    rating = raw_data.get("rating")
-    genres_data = raw_data.get("genres", [])
-    platforms_data = raw_data.get("parent_platforms", [])
-    release_date = raw_data.get("released")
-    
-    # Validate required fields
-    if not name or not description:
-        return None
-    
-    # Parse genres and platforms into clean lists
-    clean_genres = extract_genre_names(genres_data)
-    clean_platforms = extract_platform_names(platforms_data)
-    
-    return VideoGame(
-        name=name,
-        description=description,
-        genres=clean_genres,
-        platforms=clean_platforms,
-        rating=rating,
-        release_date=release_date
-    )
 
-def extract_genre_names(genres_data: list) -> list[str]:
-    """Extract genre names from API response"""
-    if not genres_data:
-        return []
-    return [genre.get("name", "") for genre in genres_data if genre.get("name")]
-
-def extract_platform_names(platforms_data: list) -> list[str]:
-    """Extract platform names from API response"""
-    if not platforms_data:
-        return []
-    return [
-        platform.get("platform", {}).get("name", "") 
-        for platform in platforms_data 
-        if platform.get("platform", {}).get("name")
-    ]
+# ========================================================
+#              LLM RESPONSE GENERATION
+# ========================================================
 
 def generate_and_display_review(game: VideoGame | None) -> None:
     """Generate and display an AI-powered game review"""
@@ -335,11 +325,46 @@ def stream_llm_response(conversation: list[dict]) -> None:
         print(f"\n\nError generating review: {e}")
         print("\n=====================================================================")
 
+# ========================================================
+#                   HELPER METHODS
+# ========================================================
+
+def is_exit_command(user_input: str) -> bool:
+    """Check if user wants to exit the application"""
+    return user_input.lower().strip() in {"exit", "quit"}
+
+def show_thinking_phrase() -> None:
+    """Display a random thinking phrase to show personality"""
+    phrase = random.choice(THINKING_PHRASES)
+    print(f"\n{phrase}", end="", flush=True)
+
+def show_goodbye_message() -> None:
+    """Display farewell message to user"""
+    print("\nUntil next time, gamer 🫡\n")
+
+def start_progress_indicator() -> None:
+    """Start the progress dots thread for visual feedback"""
+    global progress_event, progress_thread
+    progress_event = threading.Event()
+    progress_thread = threading.Thread(target=show_progress_dots, args=(progress_event,))
+    progress_thread.daemon = True
+    progress_thread.start()
+
+def stop_progress_indicator() -> None:
+    """Stop the progress dots thread"""
+    global progress_event, progress_thread
+    if progress_event and progress_thread:
+        progress_event.set()
+        progress_thread.join(timeout=1)
+
 def show_progress_dots(stop_event: threading.Event) -> None:
     """Show animated dots every 0.5 seconds until stop_event is set"""
     while not stop_event.is_set():
         print(".", end="", flush=True)
         stop_event.wait(0.5)  # Wait 0.5 seconds or until event is set
+
+
+
 
 # Application entry point
 if __name__ == "__main__":
