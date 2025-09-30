@@ -183,8 +183,6 @@ Spell Attributes:
     * What element best represents it
 - strength
     * How powerful the spell is (stronger attacks, greater effect for buffs / debuffs)
-- mana_cost
-    * How much mana it costs to cast this spell
 
 Element Personalities:
 - FIRE: Damage highest, Accuracy low, Defense low, Health medium, Healing lowest. Aggressive burst offense (flame, inferno, ember, volcano, blaze)
@@ -203,15 +201,12 @@ Spell Types Explained:
 Spell Composition:
 - Always include at least 1 damage spell
 - Use elements matching primary_element and secondary_element
-- Have a variety of elements, strength, and mana costs across the 4 spells
+- Have a variety of elements and strength across the 4 spells
 
 Spell Composition (continued):
 - (aggressive, impulsive, ferocious, explosive, hot-headed, reckless) means more damage spells
 - (protective, disciplined, resilient, empowering, courageous, enduring) means more buff spells
 - (cunning, deceptive, corrupting, parasitic, manipulative, withering) means more debuff spells
-
-Strength ↔ Mana rule (must obey):
-- Higher "strength" ⇒ higher "mana_cost". Enforce monotonicity across the set
 
 Additional Guidelines:
 - Descriptions must be distinct and concrete; no stat talk—describe magical method (e.g., “splits lightning to spear foes with forking bolts”).
@@ -234,10 +229,10 @@ Wizard stats:
 }
 Output:
 [
-  {"name":"Redline Burst","description":"Detonates a streak of burning rubber that slams the target","spell_type":"DAMAGE","element":"FIRE","strength":0.25,"mana_cost":0.18},
-  {"name":"Nitro Backfire","description":"Vents a blast from the tail that scorches everything behind","spell_type":"DAMAGE","element":"FIRE","strength":0.52,"mana_cost":0.43},
-  {"name":"Oversteer Arc","description":"Whips a fishtailing curve of lightning that clips the foe","spell_type":"DAMAGE","element":"STORM","strength":0.76,"mana_cost":0.71},
-  {"name":"Apex Inferno","description":"Unleashes a flaming drift that engulfs the enemy in a blazing loop","spell_type":"DAMAGE","element":"FIRE","strength":0.95,"mana_cost":0.88}
+  {"name":"Redline Burst","description":"Detonates a streak of burning rubber that slams the target","spell_type":"DAMAGE","element":"FIRE","strength":0.25},
+  {"name":"Nitro Backfire","description":"Vents a blast from the tail that scorches everything behind","spell_type":"DAMAGE","element":"FIRE","strength":0.52},
+  {"name":"Oversteer Arc","description":"Whips a fishtailing curve of lightning that clips the foe","spell_type":"DAMAGE","element":"STORM","strength":0.76},
+  {"name":"Apex Inferno","description":"Unleashes a flaming drift that engulfs the enemy in a blazing loop","spell_type":"DAMAGE","element":"FIRE","strength":0.95}
 ]
 
 Wizard description: "A deck of marked playing cards on a velvet table"
@@ -255,10 +250,10 @@ Wizard stats:
 }
 Output:
 [
-  {"name":"Cut the Queen","description":"Flicks a razor-edged card that slices with a whisper","spell_type":"DAMAGE","element":"MYTH","strength":0.30,"mana_cost":0.27},
-  {"name":"Stacked Deck","description":"Palms phantom cards that subtly weight luck in your favor","spell_type":"BUFF","element":"MYTH","strength":0.55,"mana_cost":0.46},
-  {"name":"False Tell","description":"Plants a convincing feint that sours the foe's timing","spell_type":"DEBUFF","element":"BALANCE","strength":0.72,"mana_cost":0.69},
-  {"name":"House Edge","description":"Tilts the table itself until every move favors you","spell_type":"BUFF","element":"BALANCE","strength":0.88,"mana_cost":0.91}
+  {"name":"Cut the Queen","description":"Flicks a razor-edged card that slices with a whisper","spell_type":"DAMAGE","element":"MYTH","strength":0.30},
+  {"name":"Stacked Deck","description":"Palms phantom cards that subtly weight luck in your favor","spell_type":"BUFF","element":"MYTH","strength":0.55},
+  {"name":"False Tell","description":"Plants a convincing feint that sours the foe's timing","spell_type":"DEBUFF","element":"BALANCE","strength":0.72},
+  {"name":"House Edge","description":"Tilts the table itself until every move favors you","spell_type":"BUFF","element":"BALANCE","strength":0.88}
 ]
 
 Wizard description: "A bulldozer crawling through rubble at dawn"
@@ -276,10 +271,10 @@ Wizard stats:
 }
 Output:
 [
-  {"name":"Steel Tread Crush","description":"Rolls a grinding track that flattens everything in its path","spell_type":"DAMAGE","element":"ICE","strength":0.20,"mana_cost":0.13},
-  {"name":"Frosted Ram","description":"Drives a chill-forged blade to shove the foe backward","spell_type":"DAMAGE","element":"ICE","strength":0.46,"mana_cost":0.36},
-  {"name":"Load-Bearing Slam","description":"Drops a reinforced bucket from above with bone-shaking force","spell_type":"DAMAGE","element":"BALANCE","strength":0.73,"mana_cost":0.67},
-  {"name":"Gravel Choke","description":"Kicks up a storm of grit that clogs joints and slows movement","spell_type":"DEBUFF","element":"BALANCE","strength":0.90,"mana_cost":0.82}
+  {"name":"Steel Tread Crush","description":"Rolls a grinding track that flattens everything in its path","spell_type":"DAMAGE","element":"ICE","strength":0.20},
+  {"name":"Frosted Ram","description":"Drives a chill-forged blade to shove the foe backward","spell_type":"DAMAGE","element":"ICE","strength":0.46},
+  {"name":"Load-Bearing Slam","description":"Drops a reinforced bucket from above with bone-shaking force","spell_type":"DAMAGE","element":"BALANCE","strength":0.73},
+  {"name":"Gravel Choke","description":"Kicks up a storm of grit that clogs joints and slows movement","spell_type":"DEBUFF","element":"BALANCE","strength":0.90}
 ]
 
 Wizard description: "Noise-canceling headphones in a crowded café"
@@ -297,9 +292,9 @@ Wizard stats:
 }
 Output:
 [
-  {"name":"Pressure Drop Pulse","description":"Releases a hush-wave that thumps the foe with compressed silence","spell_type":"DAMAGE","element":"BALANCE","strength":0.34,"mana_cost":0.29},
-  {"name":"Cold Focus","description":"Sheathes the mind in cool stillness that steadies every motion","spell_type":"BUFF","element":"ICE","strength":0.59,"mana_cost":0.53},
-  {"name":"Hiss Drown","description":"Blankets the field in anti-noise that muddles signals and cues","spell_type":"DEBUFF","element":"BALANCE","strength":0.78,"mana_cost":0.75},
-  {"name":"Mute Strike","description":"Snaps a silent crack that hits without echo or warning","spell_type":"DAMAGE","element":"ICE","strength":0.92,"mana_cost":0.89}
+  {"name":"Pressure Drop Pulse","description":"Releases a hush-wave that thumps the foe with compressed silence","spell_type":"DAMAGE","element":"BALANCE","strength":0.34},
+  {"name":"Cold Focus","description":"Sheathes the mind in cool stillness that steadies every motion","spell_type":"BUFF","element":"ICE","strength":0.59},
+  {"name":"Hiss Drown","description":"Blankets the field in anti-noise that muddles signals and cues","spell_type":"DEBUFF","element":"BALANCE","strength":0.78},
+  {"name":"Mute Strike","description":"Snaps a silent crack that hits without echo or warning","spell_type":"DAMAGE","element":"ICE","strength":0.92}
 ]
 """

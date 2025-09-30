@@ -4,9 +4,10 @@
 Handles the flow of the game as it plays out
 """
 
-from classes import Element, SpellType, Spell, Wizard
+from classes import Element, EnemyWizard, SpellType, Spell, Wizard, Defend, Heal
 from prompts import WIZARD_GENERATOR_SYSTEM_PROMPT, SPELL_GENERATOR_SYSTEM_PROMPT
 from schemas import WIZARD_GENERATION_SCHEMA, SPELL_GENERATION_SCHEMA
+from enemy_wizards import ENEMY_WIZARDS
 import ollama
 
 def main():
@@ -50,29 +51,15 @@ def main():
     print("==== Wizard Spells ====")
     print(spells)
 
+def main2():
+    # for ew in ENEMY_WIZARDS:
+    #     print(f"attack: {ew.attack} defense: {ew.defense} health: {ew.health} healing: {ew.healing} arcane: {ew.arcane}")
+    #     print(f"DM: {ew.damage_multiplier()} RD: {ew.damage_reduction()} HP: {ew.max_hp()} SM: {ew.starting_mana()} MPR: {ew.mana_per_round()}")
+    #     print()
+
+
+    print(ENEMY_WIZARDS[0])
+
 # Example usage:
 if __name__ == "__main__":
     main()
-
-
-# # Generation logic:
-# • Name - whatever
-# • Element - what is best fitting based on the description
-# • Spells - create something that is partially balance and connects well with the description given
-#     • The higher the value of a spell the more mana it should be
-# • Attack - [40,100]
-# • Defense - [40,100]
-# • Health - [600, 1000]
-# • Mana - [8,15]
-
-
-# # Spell generation:
-# • Name - whatever
-# • Description - whatever
-# • spell_type - Try and have a variety of these (unless the prompt really doesn't want it to be)
-# • element - Whatever makes sense based on the prompts
-# • value - as a % of the max value it can have
-# • mana_cost - whatever makes sense based on the value generated
-
-# Have a separate spell generator LLM and overall stats generator?
-# Gain 2 mana per round
