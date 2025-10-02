@@ -19,7 +19,11 @@ dependencies:
   - chromadb
   - jupyter-dash
   - pyarrow
+  - nodejs
   - pip:
+    - fastapi
+    - uvicorn[standard]
+    - pydantic
     - beautifulsoup4
     - plotly
     - transformers
