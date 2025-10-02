@@ -7,7 +7,7 @@ Defines classes to be used throughout the game
 import random
 import math
 from enum import Enum, auto
-from typing import List
+from typing import Any, Dict, List
 from abc import ABC, abstractmethod
 
 # ===============================================
@@ -102,12 +102,17 @@ class ActionTarget(Enum):
     ENEMY = auto()
 
 class SpellType(Enum):
-    DAMAGE = (0.1)
-    BUFF = (0.05)
-    DEBUFF = (0.051)
+    DAMAGE = auto()
+    BUFF = auto()
+    DEBUFF = auto()
 
-    def __init__(self, variance: float):
-        self.variance = variance
+    @property
+    def variance(self) -> float:
+        return {
+            SpellType.DAMAGE: 0.1,
+            SpellType.BUFF: 0.05,
+            SpellType.DEBUFF: 0.05,
+        }[self]
 
 
 # ===============================================
@@ -118,7 +123,8 @@ class SpellType(Enum):
 class Action(ABC):
     """Represents a generic action a wizard can take on their turn"""
 
-    def __init__(self, strength: float, accuracy: float, variance: float):
+    def __init__(self, action_type: ActionType, strength: float, accuracy: float, variance: float):
+        self.action_type = action_type
         self.strength = strength
         self.accuracy = accuracy
         self.variance = variance
@@ -128,15 +134,15 @@ class Action(ABC):
 
     def perform_action(self) -> dict:
         """
-        Quick wrapper around subclass_action so we don't repeat the accuracy check code
+        Quick wrapper around perform_action_subclass so we don't repeat the accuracy check code
         """
         if not self.succeeds_accuracy():
             return { "succeeded": False }
 
-        return self.subclass_action()
+        return self.perform_action_subclass()
 
     @abstractmethod
-    def subclass_action(self) -> dict:
+    def perform_action_subclass(self) -> dict:
         """
         Subclasses must define what happens when you perform this action
         """
@@ -156,6 +162,34 @@ class Action(ABC):
         """
         pass
 
+    @abstractmethod
+    def overview(self) -> str:
+        """
+        A brief overview describing what this action does (for LLM)
+        """
+        pass
+
+    @abstractmethod
+    def failure_announcement(self, wizard) -> str:
+        """
+        A brief announcement describing what happens when this action fails (for the players to see)
+        """
+        pass
+
+    @abstractmethod
+    def success_announcement(self, wizard, value: float) -> str:
+        """
+        A brief announcement describing what happens when this action succeeds (for the players to see)
+        """
+        pass
+
+    @abstractmethod
+    def action_target(self) -> ActionTarget:
+        """
+        Returns the target of this action
+        """
+        pass
+
 
 # ===============================================
 
@@ -166,19 +200,23 @@ class Heal(Action):
     VARIANCE = 0.1
 
     def __init__(self, wizard):
-        super().__init__(wizard.healing, Heal.ACCURACY, Heal.VARIANCE)
+        super().__init__(ActionType.HEAL, wizard.healing, Heal.ACCURACY, Heal.VARIANCE)
 
     def __str__(self) -> str:
-        return (f"Action Type: {ActionType.HEAL}, "
-                f"strength={self.strength:.2f}, "
-                f"accuracy={self.accuracy:.2f}, "
-                f"range={self.range()}, "
-                f"mana cost={self.mana_cost()}")
+        lines = [
+            "Heal Action:",
+            f"  action_type: {ActionType.HEAL.name}",
+            f"  strength: {self.strength:.2f}",
+            f"  accuracy: {self.accuracy:.2f}",
+            f"  range: {self.range()}",
+            f"  mana_cost: {self.mana_cost()}",
+        ]
+        return "\n".join(lines)
 
     def _healing_base(self):
         return 150.0 * ((5.0 / 3.0) ** (self.strength ** 1.8))
 
-    def subclass_action(self):
+    def perform_action_subclass(self):
         healing_base = self._healing_base()
         healing_amount = max(0, int(round(_vary(healing_base, self.variance))))
 
@@ -192,13 +230,32 @@ class Heal(Action):
     def range(self):
         healing_base = self._healing_base()
 
-        min_val = healing_base * (1 - self.variance)
-        max_val = healing_base * (1 + self.variance)
+        min_val = int(round(healing_base * (1 - self.variance)))
+        max_val = int(round(healing_base * (1 + self.variance)))
         return min_val, max_val
 
     def mana_cost(self) -> int:
-        base = 2 * (4 ** (self.strength ** 1.15))
+        base = 3 * (2 ** (self.strength ** 1.15))
         return int(round(base))
+
+    def overview(self) -> str:
+        parts = [
+            "Action Type: 'HEAL'",
+            f"Accuracy: {100 * self.accuracy}%",
+            f"Target: {ActionTarget.SELF.name}",
+            f"Mana Cost: {self.mana_cost()}",
+            f"Description: Restores {self.range()[0]} to {self.range()[1]} hp",
+        ]
+        return ", ".join(parts)
+
+    def failure_announcement(self, wizard) -> str:
+        return f"{wizard.name} casts heal... but it failed!"
+
+    def success_announcement(self, wizard, value: float) -> str:
+        return f"{wizard.name}  casts heal. {int(value)} health was restored!"
+
+    def action_target(self) -> ActionTarget:
+        return ActionTarget.SELF
 
 
 # ===============================================
@@ -206,21 +263,25 @@ class Heal(Action):
 
 class Defend(Action):
     """When the user elects to defend for that turn"""
-    ACCURACY = 1
-    VARIANCE = 0
+    ACCURACY = 1.0
+    VARIANCE = 0.0
 
     def __init__(self, element: Element):
-        super().__init__(1.0, Defend.ACCURACY, Defend.VARIANCE)
+        super().__init__(ActionType.DEFEND, 1.0, Defend.ACCURACY, Defend.VARIANCE)
         self.element = element
 
     def __str__(self) -> str:
-        return (f"Action Type: {ActionType.DEFEND}, "
-                f"element={self.element.name}, "
-                f"strength={self.strength:.2f}, "
-                f"accuracy={self.accuracy:.2f}, "
-                f"mana cost={self.mana_cost()}")
+        lines = [
+            "Defend Action:",
+            f"  action_type: {ActionType.DEFEND.name}",
+            f"  element: {self.element.name}",
+            f"  strength: {self.strength:.2f}",
+            f"  accuracy: {self.accuracy:.2f}",
+            f"  mana_cost: {self.mana_cost()}",
+        ]
+        return "\n".join(lines)
 
-    def subclass_action(self):
+    def perform_action_subclass(self):
         return {
             "succeeded": True,
             "value": self.element,
@@ -232,7 +293,29 @@ class Defend(Action):
         pass
 
     def mana_cost(self) -> int:
-        return 2
+        return 0
+
+    def overview(self) -> str:
+        parts = [
+            "Action Type: 'DEFEND'",
+            f"Element: {self.element.name}",
+            f"Accuracy: {100 * self.accuracy}%",
+            f"Target: {ActionTarget.SELF.name}",
+            f"Mana Cost: {self.mana_cost()}",
+            f"Description: Puts up a {self.element.name} shield to greatly reduce incoming damage",
+            f"Elements strong against: {', '.join(self.element.strengths)}",
+            f"Elements weak against: {', '.join(self.element.weaknesses)}",
+        ]
+        return ", ".join(parts)
+
+    def failure_announcement(self, wizard) -> str:
+        return f"{wizard.name} failed a defense? How?!?!?"
+
+    def success_announcement(self, wizard, value: float) -> str:
+        return f"{wizard.name} put up a {self.element.name} shield!"
+
+    def action_target(self) -> ActionTarget:
+        return ActionTarget.SELF
     
 
 # ===============================================
@@ -247,36 +330,52 @@ class Spell(Action):
                 description: str, 
                 element: Element, 
                 strength: float):
-        super().__init__(strength, element.accuracy, spell_type.variance)
+        super().__init__(ActionType.CAST_SPELL, strength, element.accuracy, spell_type.variance)
         self.name = name
         self.spell_type = spell_type
         self.description = description
         self.element = element
 
     def __str__(self) -> str:
-        return (f"Action Type: {ActionType.CAST_SPELL}, "
-                f"Spell name={self.name}, "
-                f"Spell type={self.spell_type.name}, "
-                f"element={self.element.name}, "
-                f"strength={self.strength:.2f}, "
-                f"accuracy={self.accuracy:.2f}, "
-                f"description='{self.description}'), "
-                f"range={self.range()}, "
-                f"variance={self.variance}, "
-                f"mana cost={self.mana_cost()}")
+        lines = [
+            "Spell Action:",
+            f"  action_type: {ActionType.CAST_SPELL.name}",
+            f"  name: {self.name}",
+            f"  spell_type: {self.spell_type.name}",
+            f"  element: {self.element.name}",
+            f"  strength: {self.strength:.2f}",
+            f"  accuracy: {self.accuracy:.2f}",
+            f"  variance: {self.variance:.3f}",
+            f"  range: {self.range()}",
+            f"  mana_cost: {self.mana_cost()}",
+            f"  description: {self.description}",
+        ]
+        return "\n".join(lines)
 
-    def _spell_value(self) -> float:
+    def _base_spell_value(self) -> float:
         match self.spell_type:
             case SpellType.DAMAGE:
                 return 100.0 * (2.0 ** (self.strength ** 2))
             case SpellType.BUFF:
-                steps = int(self.strength / 0.2) + 1
-                return steps * 0.05
+                return 0.1 * ((0.25 / 0.1) ** (self.strength ** 1.8))
             case SpellType.DEBUFF:
-                steps = int(self.strength / 0.2) + 1
-                return steps * 0.05
+                return 0.1 * ((0.25 / 0.1) ** (self.strength ** 1.8))
 
-    def _target(self) -> ActionTarget:
+    def _varied_spell_value(self) -> float:
+        base_value = self._base_spell_value()
+        varied_spell_value = _vary(base_value, self.variance)
+        return self._round_spell_value(varied_spell_value)
+
+    def _round_spell_value(self, value: float) -> float:
+        match self.spell_type:
+            case SpellType.DAMAGE:
+                return int(round(value))
+            case SpellType.BUFF:
+                return round(value, 3)
+            case SpellType.DEBUFF:
+                return round(value, 3)
+
+    def action_target(self) -> ActionTarget:
         match self.spell_type:
             case SpellType.DAMAGE:
                 return ActionTarget.ENEMY
@@ -285,23 +384,23 @@ class Spell(Action):
             case SpellType.DEBUFF:
                 return ActionTarget.ENEMY
 
-    def subclass_action(self) -> dict:
-        # Default values
-        base = self._spell_value()
-        target = self._target()
-        variance = self.variance
-
+    def _spell_effect(self) -> str:
         match self.spell_type:
             case SpellType.DAMAGE:
-                value = int(round(_vary(base, variance)))
+                return f"Deals {self.range()[0]}-{self.range()[1]} damage"
             case SpellType.BUFF:
-                value = round(_vary(base, variance), 3)
+                return f"Increases your attack and defense by {self.range()[0]}-{self.range()[1]}% for 3 rounds"
             case SpellType.DEBUFF:
-                value = round(_vary(base, variance), 3)
+                return f"Reduces enemy attack and defense by {self.range()[0]}-{self.range()[1]}% for 3 rounds"
+
+    def perform_action_subclass(self) -> dict:
+        # Default values
+        spell_value = self._varied_spell_value()
+        target = self.action_target()
 
         return {
             "succeeded": True,
-            "value": value,
+            "value": spell_value,
             "action_type": ActionType.CAST_SPELL,
             "spell_type": self.spell_type,
             "target": target,
@@ -311,22 +410,12 @@ class Spell(Action):
         """
         Returns the (min, max) possible values for this spell
         """
+        base = self._base_spell_value()
         variance = self.variance
 
-        match self.spell_type:
-            case SpellType.DAMAGE:
-                base = 100.0 * (2.0 ** (self.strength ** 2))
+        min_val = self._round_spell_value(base * (1 - variance))
+        max_val = self._round_spell_value(base * (1 + variance))
 
-            case SpellType.BUFF:
-                steps = int(self.strength / 0.2) + 1
-                base = steps * 0.05
-
-            case SpellType.DEBUFF:
-                steps = int(self.strength / 0.2) + 1
-                base = steps * 0.05
-
-        min_val = base * (1 - variance)
-        max_val = base * (1 + variance)
         return min_val, max_val
 
     def mana_cost(self):
@@ -337,8 +426,52 @@ class Spell(Action):
           cost = 2 * (4 ^ (mana_cost ^ 1.15))
         Rounded to nearest integer.
         """
-        base = 2 * (4 ** (self.strength ** 1.15))
+        base = 3 * ((10.0 / 3.0) ** (self.strength ** 1.15))
         return int(round(base))
+
+    def overview(self) -> str:
+        parts = [
+            "Action Type: 'CAST_SPELL'",
+            f"Spell Type: {self.spell_type.name}",
+            f"Element: {self.element.name}",
+            f"Accuracy: {100 * self.accuracy}%",
+            f"Target: {self.action_target().name}",
+            f"Mana Cost: {self.mana_cost()}",
+            f"Description: {self._spell_effect()}",
+            f"Elements strong against: {', '.join(self.element.strengths)}",
+            f"Elements weak against: {', '.join(self.element.weaknesses)}",
+        ]
+        return ", ".join(parts)
+
+    def failure_announcement(self, wizard) -> str:
+        return f"{wizard.name} casts {self.name}... but it failed!"
+
+    def success_announcement(self, wizard, value: float) -> str:
+        match self.spell_type:
+            case SpellType.DAMAGE:
+                return f"{wizard.name} casts {self.name} dealing {int(value)} damage!"
+            case SpellType.BUFF:
+                return f"{wizard.name} casts {self.name}. Their attack and defense increase by {value}%!"
+            case SpellType.DEBUFF:
+                return f"{wizard.name} casts {self.name}. Their opponent's attack and defense decrease by {value}%!"
+
+    # ------------------------------------------------------------------
+    # Factory helpers
+    # ------------------------------------------------------------------
+    @staticmethod
+    def build_from_json(data: Dict[str, Any]) -> "Spell":
+        required = ["name", "spell_type", "description", "element", "strength"]
+        missing = [key for key in required if key not in data]
+        if missing:
+            raise ValueError(f"Missing keys for Spell: {', '.join(missing)}")
+
+        return Spell(
+            name=str(data["name"]),
+            spell_type=SpellType[str(data["spell_type"]).upper()],
+            description=str(data["description"]),
+            element=Element[str(data["element"]).upper()],
+            strength=float(data["strength"]),
+        )
 
 
 
@@ -371,20 +504,27 @@ class Wizard:
         self.combat_style = combat_style
 
     def __str__(self) -> str:
-        return (f"Name: {self.name}\n "
-                f"Primary element={self.primary_element}\n "
-                f"Secondary element={self.secondary_element}\n "
-                f"attack={self.attack}\n "
-                f"defense={self.defense}\n "
-                f"health={self.health}\n "
-                f"healing={self.healing}\n "
-                f"arcane={self.arcane}\n "
-                f"combat style={self.combat_style}\n "
-                f"max hp={self.max_hp()}\n "
-                f"damage mult={self.damage_multiplier()}\n "
-                f"damage red={self.damage_reduction()}\n "
-                f"starting mana={self.starting_mana()}\n "
-                f"mpr={self.mana_per_round()}")
+        header = (
+            f"Name: {self.name}\n "
+            f"Primary element={self.primary_element}\n "
+            f"Secondary element={self.secondary_element}\n "
+            f"attack={self.attack}\n "
+            f"defense={self.defense}\n "
+            f"health={self.health}\n "
+            f"healing={self.healing}\n "
+            f"arcane={self.arcane}\n "
+            f"combat style={self.combat_style}\n "
+            f"max hp={self.max_hp()}\n "
+            f"damage mult={self.damage_multiplier()}\n "
+            f"damage red={self.damage_reduction()}\n "
+            f"starting mana={self.starting_mana()}\n "
+            f"mpr={self.mana_per_round()}\n"
+        )
+
+        actions = [action.overview() for action in self.all_actions()]
+        actions_block = "\n ".join(f"Action {idx+1}: {desc}" for idx, desc in enumerate(actions))
+
+        return f"{header} Available actions:\n {actions_block}"
 
 
     def max_hp(self) -> int:
@@ -398,25 +538,19 @@ class Wizard:
 
     def damage_multiplier(self) -> float:
         """
-        Attack (0-1): dmg_mult = 0.75 * (5/3)^(attack^2), with ±10% variance.
+        Attack (0-1): dmg_mult = (1.25)^(attack^2)
         """
-        base = 0.75 * ((5.0 / 3.0) ** (self.attack ** 2))
-        varied = _vary(base)
-        # Ensure it's positive
-        return max(0.0, varied)
+        return (1.25 ** (self.attack ** 2))
 
     def damage_reduction(self) -> float:
         """
-        Defense (0-1): dmg_reduction = 0.9 * (14/9)^(defense^2), with ±10% variance.
-        (Interpretation per given formula; engine can apply as designed.)
+        Defense (0-1): dmg_reduction = 1.1 * (8/11)^(defense^1.8)
         """
-        base = 0.9 * ((14.0 / 9.0) ** (self.defense ** 2))
-        varied = _vary(base)
-        return max(0.0, varied)
+        return 1.1 * ((8.0 / 11.0) ** (self.defense ** 1.8))
 
     def starting_mana(self) -> int:
         """
-        Arcane (0-1): starting_mana = 5 * 2^(arcane^1.3), with ±10% variance.
+        Arcane (0-1): starting_mana = 10 * 2^(arcane^1.3), with ±10% variance.
         Returns an int >= 0.
         """
         base = 10.0 * (2.0 ** (self.arcane ** 1.3))
@@ -428,20 +562,77 @@ class Wizard:
         Calculate the amount of mana gained at the start of each round
 
         Formula:
-          mana_gained = 2 * (4 ^ (arcane ^ 1.15))
+          mana_gained = 2 * (3 ^ (arcane ^ 1.15))
         Rounded to nearest integer.
         """
-        base = 2 * (4 ** (self.arcane ** 1.15))
+        base = 2 * ((2.5) ** (self.arcane ** 1.15))
         return int(round(base))
 
-    # def all_actions(self) -> List[Action]:
-    #     # Base 4 spells
-    #     # Add in 1 heal
-    #     # Add in 2 defenses
+    def all_actions(self) -> List[Action]:
+        spell_priority = {
+            SpellType.DAMAGE: 0,
+            SpellType.BUFF: 1,
+            SpellType.DEBUFF: 2,
+        }
 
+        sorted_spells = sorted(
+            self.spells,
+            key=lambda spell: (
+                spell_priority.get(spell.spell_type, float("inf")),
+                spell.name.lower(),
+            ),
+        )
 
-    # - Make healing at the wizard level again
-    # - Add defending
+        actions: List[Action] = []
+        actions.extend(sorted_spells)
+        actions.append(Heal(self))
+        actions.append(Defend(self.primary_element))
+        actions.append(Defend(self.secondary_element))
+
+        return actions
+
+    def affordable_actions(self, mana_cap: int) -> List[Action]:
+        return [action for action in self.all_actions() if action.mana_cost() <= mana_cap]
+
+    # ------------------------------------------------------------------
+    # Factory helpers
+    # ------------------------------------------------------------------
+    @staticmethod
+    def build_from_json(data: Dict[str, Any]) -> "Wizard":
+        required = [
+            "name",
+            "primary_element",
+            "secondary_element",
+            "attack",
+            "defense",
+            "health",
+            "healing",
+            "arcane",
+            "combat_style",
+            "spells",
+        ]
+        missing = [key for key in required if key not in data]
+        if missing:
+            raise ValueError(f"Missing keys for Wizard: {', '.join(missing)}")
+
+        spells_payload = data["spells"]
+        if not isinstance(spells_payload, list):
+            raise ValueError("Wizard 'spells' must be a list")
+
+        spells = [Spell.build_from_json(spell) for spell in spells_payload]
+
+        return Wizard(
+            name=str(data["name"]),
+            primary_element=Element[str(data["primary_element"]).upper()],
+            secondary_element=Element[str(data["secondary_element"]).upper()],
+            attack=float(data["attack"]),
+            defense=float(data["defense"]),
+            health=float(data["health"]),
+            healing=float(data["healing"]),
+            arcane=float(data["arcane"]),
+            spells=spells,
+            combat_style=str(data["combat_style"]),
+        )
 
 
 # ===============================================

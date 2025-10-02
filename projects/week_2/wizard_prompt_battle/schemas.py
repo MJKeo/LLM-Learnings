@@ -36,3 +36,15 @@ SPELL_GENERATION_SCHEMA = {
         "additionalProperties": False
     }
 }
+
+ACTION_CHOICE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "action": {
+            "type": "integer",
+            "minimum": 1   # ensures action > 0
+        },
+    },
+    "required": ["action"],
+    "additionalProperties": False
+}
