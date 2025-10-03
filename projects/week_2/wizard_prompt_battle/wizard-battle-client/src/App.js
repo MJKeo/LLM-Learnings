@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import GatherDescriptions from "./gather_descriptions";
 import DisplayWizards from "./display_wizards";
@@ -8,6 +8,13 @@ const API_BASE_URL =
 
 function App() {
   const [descriptions, setDescriptions] = useState(null);
+  const [playerOneWizard, setPlayerOneWizard] = useState(null);
+  const [playerTwoWizard, setPlayerTwoWizard] = useState(null);
+
+  useEffect(() => {
+    setPlayerOneWizard(null);
+    setPlayerTwoWizard(null);
+  }, []);
 
   const handleDescriptionsComplete = (playerOne, playerTwo) => {
     setDescriptions({ playerOne, playerTwo });
@@ -15,6 +22,16 @@ function App() {
 
   const handleReset = () => {
     setDescriptions(null);
+    setPlayerOneWizard(null);
+    setPlayerTwoWizard(null);
+  };
+
+  const handleWizardReady = (label, wizardInstance) => {
+    if (label === "Player 1") {
+      setPlayerOneWizard(wizardInstance);
+    } else if (label === "Player 2") {
+      setPlayerTwoWizard(wizardInstance);
+    }
   };
 
   return (
@@ -29,6 +46,9 @@ function App() {
           onBeginBattle={() => {
             /* TODO: hook into game flow */
           }}
+          playerOneWizard={playerOneWizard}
+          playerTwoWizard={playerTwoWizard}
+          onWizardReady={handleWizardReady}
         />
       )}
     </div>

@@ -49,6 +49,10 @@ class Action {
   action_target() {
     throw new Error("action_target must be implemented by subclasses");
   }
+
+  display_card() {
+    throw new Error("display_card must be implemented by subclasses");
+  }
 }
 
 export default Action;

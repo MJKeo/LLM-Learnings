@@ -190,6 +190,13 @@ class Action(ABC):
         """
         pass
 
+    @abstractmethod
+    def display_card(self) -> Dict[str, Any]:
+        """
+        Returns a JSON-serialisable payload describing this action for UI cards.
+        """
+        pass
+
 
 # ===============================================
 
@@ -257,6 +264,17 @@ class Heal(Action):
     def action_target(self) -> ActionTarget:
         return ActionTarget.SELF
 
+    def display_card(self) -> Dict[str, Any]:
+        min_val, max_val = self.range()
+        return {
+            "type": "HEAL",
+            "element": None,
+            "name": "Heal",
+            "description": f"Restores {min_val}-{max_val} health.",
+            "accuracy": self.accuracy,
+            "mana_cost": self.mana_cost(),
+        }
+
 
 # ===============================================
 
@@ -317,6 +335,22 @@ class Defend(Action):
     def action_target(self) -> ActionTarget:
         return ActionTarget.SELF
     
+    def display_card(self) -> Dict[str, Any]:
+        strengths = ", ".join(self.element.strengths)
+        weaknesses = ", ".join(self.element.weaknesses)
+        description = (
+            f"Raises a {self.element.display_name} shield. "
+            f"Strong vs {strengths}. Weak vs {weaknesses}."
+        )
+        return {
+            "type": "DEFENSE",
+            "element": self.element.name,
+            "name": f"{self.element.display_name} Defense",
+            "description": description,
+            "accuracy": self.accuracy,
+            "mana_cost": self.mana_cost(),
+        }
+
 
 # ===============================================
 
@@ -454,6 +488,16 @@ class Spell(Action):
                 return f"{wizard.name} casts {self.name}. Their attack and defense increase by {value}%!"
             case SpellType.DEBUFF:
                 return f"{wizard.name} casts {self.name}. Their opponent's attack and defense decrease by {value}%!"
+
+    def display_card(self) -> Dict[str, Any]:
+        return {
+            "type": self.spell_type.name,
+            "element": self.element.name,
+            "name": self.name,
+            "description": self._spell_effect(),
+            "accuracy": self.accuracy,
+            "mana_cost": self.mana_cost(),
+        }
 
     # ------------------------------------------------------------------
     # Factory helpers

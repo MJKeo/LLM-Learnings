@@ -42,7 +42,7 @@ def generate_spells(description: str, stats: dict) -> list[dict]:
         format=SPELL_GENERATION_SCHEMA,
         options={
             "temperature": 0.75,
-            "num_predict": 225,
+            "num_predict": 250,
             "top_p": 0.9,
             "top_k": 40,
             "keep_alive": "10m",

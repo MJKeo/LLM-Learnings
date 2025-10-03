@@ -144,6 +144,17 @@ class Spell extends Action {
     }
   }
 
+  display_card() {
+    return {
+      type: this.spell_type.name,
+      element: this.element.name,
+      name: this.name,
+      description: this.#spell_effect(),
+      accuracy: this.accuracy,
+      mana_cost: this.mana_cost(),
+    };
+  }
+
   static build_from_json(data) {
     const required = ["name", "spell_type", "description", "element", "strength"];
     const missing = required.filter((key) => !(key in data));

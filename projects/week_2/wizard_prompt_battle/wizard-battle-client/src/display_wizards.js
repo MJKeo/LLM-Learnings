@@ -1,4 +1,48 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Wizard from "./classes/wizard";
+import Spell from "./classes/spell";
+import Element from "./enums/element";
+
+const ensureActionInstance = (action) => {
+  if (!action) {
+    return null;
+  }
+
+  if (typeof action.display_card === "function") {
+    return action;
+  }
+
+  try {
+    return Spell.build_from_json({
+      name: action.name,
+      spell_type: String(action.spell_type ?? action.type ?? "").toUpperCase(),
+      description: action.description ?? "",
+      element: String(action.element ?? "").toUpperCase(),
+      strength: Number(action.strength ?? 0),
+    });
+  } catch (error) {
+    console.error("Failed to coerce action payload into Spell instance", action, error);
+    return null;
+  }
+};
+
+const getActionCardClass = (card) => {
+  const type = String(card?.type ?? "").toUpperCase();
+  if (type === "HEAL") {
+    return "spell-card-heal";
+  }
+  if (type === "DEFENSE") {
+    return "spell-card-defense";
+  }
+  return "spell-card-spell";
+};
+
+const formatAccuracy = (accuracy) => {
+  if (typeof accuracy !== "number") {
+    return "🎯 ?";
+  }
+  return `🎯 ${Math.round(accuracy * 100)}%`;
+};
 
 const STAT_CONFIG = [
   { key: "attack", label: "Attack", color: "#f87171" },
@@ -7,7 +51,15 @@ const STAT_CONFIG = [
   { key: "arcane", label: "Arcane", color: "#c084fc" },
 ];
 
-function DisplayWizards({ descriptions, apiBaseUrl, onReset, onBeginBattle = () => {} }) {
+function DisplayWizards({
+  descriptions,
+  apiBaseUrl,
+  onReset,
+  onBeginBattle = () => {},
+  onWizardReady,
+  playerOneWizard,
+  playerTwoWizard,
+}) {
   const [results, setResults] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -67,7 +119,38 @@ function DisplayWizards({ descriptions, apiBaseUrl, onReset, onBeginBattle = () 
             }
 
             const spellsData = await spellsResponse.json();
-            appendResult(label, { spells: spellsData });
+            let wizardInstance = null;
+            try {
+              const spellInstances = spellsData.map((spell) =>
+                Spell.build_from_json({
+                  name: spell.name,
+                  spell_type: String(spell.spell_type ?? spell.type ?? "").toUpperCase(),
+                  description: spell.description ?? "",
+                  element: String(spell.element ?? ""),
+                  strength: Number(spell.strength ?? 0),
+                })
+              );
+
+              wizardInstance = new Wizard(
+                statsData.name,
+                Element.fromName(statsData.primary_element),
+                Element.fromName(statsData.secondary_element),
+                Number(statsData.attack),
+                Number(statsData.defense),
+                Number(statsData.health),
+                Number(statsData.healing),
+                Number(statsData.arcane),
+                spellInstances,
+                statsData.combat_style
+              );
+            } catch (wizardError) {
+              console.error(`Failed to build wizard for ${label}`, wizardError);
+            }
+
+            appendResult(label, { spells: spellsData, wizard: wizardInstance });
+            if (wizardInstance && onWizardReady) {
+              onWizardReady(label, wizardInstance);
+            }
           })
         );
       } catch (error) {
@@ -84,6 +167,50 @@ function DisplayWizards({ descriptions, apiBaseUrl, onReset, onBeginBattle = () 
     fetchData();
   }, [descriptions, apiBaseUrl]);
 
+  const playersByLabel = useMemo(() => ({
+    "Player 1": playerOneWizard,
+    "Player 2": playerTwoWizard,
+  }), [playerOneWizard, playerTwoWizard]);
+
+  useEffect(() => {
+    if (!onWizardReady) {
+      return;
+    }
+
+    results.forEach(({ label, stats, spells }) => {
+      if (!stats || !spells) {
+        return;
+      }
+
+      if (playersByLabel[label]) {
+        return;
+      }
+
+      const wizardInstance = new Wizard(
+        stats.name,
+        Element.fromName(stats.primary_element),
+        Element.fromName(stats.secondary_element),
+        stats.attack,
+        stats.defense,
+        stats.health,
+        stats.healing,
+        stats.arcane,
+        spells.map((spell) =>
+          new Spell(
+            spell.name,
+            spell.spell_type ? spell.spell_type : spell.type,
+            spell.description ?? "",
+            Element.fromName(spell.element),
+            spell.strength
+          )
+        ),
+        stats.combat_style
+      );
+
+      onWizardReady(label, wizardInstance);
+    });
+  }, [results, onWizardReady, playersByLabel]);
+
   const allComplete =
     results.length === 2 && results.every((entry) => entry.stats && entry.spells);
 
@@ -99,21 +226,74 @@ function DisplayWizards({ descriptions, apiBaseUrl, onReset, onBeginBattle = () 
         </div>
       )}
 
+      <div className={`wizard-actions-header${allComplete ? " wizard-actions-header--complete" : ""}`}>
+        {allComplete && (
+          <button className="prompt-button" type="button" onClick={onBeginBattle}>
+            Begin Battle
+          </button>
+        )}
+      </div>
+
       <div className="wizard-grid">
-        {results.map(({ label, stats, spells }) => (
-          <article key={label} className="wizard-card">
+        {results.map(({ label, stats, spells, wizard: localWizard }) => {
+          const wizardFromProps = label === "Player 1" ? playerOneWizard : playerTwoWizard;
+          const wizard = wizardFromProps ?? localWizard;
+          const displayStats = wizard ?? stats;
+
+          const name = wizard ? wizard.name : stats?.name;
+          const combatStyle = wizard ? wizard.combat_style : stats?.combat_style;
+          const primaryElement = wizard
+            ? wizard.primary_element?.name
+            : stats?.primary_element;
+          const secondaryElement = wizard
+            ? wizard.secondary_element?.name
+            : stats?.secondary_element;
+          const rawActions = wizard
+            ? wizard.all_actions()
+            : (spells ?? []).map((spell) => ensureActionInstance(spell)).filter(Boolean);
+
+          const actionsToShow = rawActions
+            .map((action) => ({ action, card: ensureActionInstance(action)?.display_card?.() ?? action?.display_card?.() }))
+            .map(({ action, card }) => {
+              if (!card) {
+                return { action, card: null };
+              }
+
+              if (String(card.type ?? "").toUpperCase() === "DEFENSE") {
+                return {
+                  action,
+                  card: { ...card, name: "Shield" },
+                };
+              }
+
+              return { action, card };
+            })
+            .filter(({ card }) => card !== null)
+            .sort((a, b) => {
+              const typeOrder = { DAMAGE: 0, BUFF: 1, DEBUFF: 2, DEFENSE: 3, DEFEND: 3, HEAL: 4 };
+              const aType = String(a.card.type ?? "").toUpperCase();
+              const bType = String(b.card.type ?? "").toUpperCase();
+              const orderDiff = (typeOrder[aType] ?? 99) - (typeOrder[bType] ?? 99);
+              if (orderDiff !== 0) {
+                return orderDiff;
+              }
+              return String(a.card.name ?? "").localeCompare(String(b.card.name ?? ""));
+            });
+
+          return (
+            <article key={label} className="wizard-card">
             <header className="wizard-header">
               <p className="wizard-label">{label}</p>
-              {stats ? (
+              {displayStats ? (
                 <>
-                  <h3 className="wizard-name">{stats.name}</h3>
-                  <p className="wizard-style">{stats.combat_style}</p>
+                  <h3 className="wizard-name">{name}</h3>
+                  <p className="wizard-style">{combatStyle}</p>
                   <div className="element-tags">
-                    <span className={`element-pill element-${stats.primary_element.toLowerCase()}`}>
-                      {stats.primary_element}
+                    <span className={`element-pill element-${primaryElement?.toLowerCase()}`}>
+                      {primaryElement}
                     </span>
-                    <span className={`element-pill element-${stats.secondary_element.toLowerCase()}`}>
-                      {stats.secondary_element}
+                    <span className={`element-pill element-${secondaryElement?.toLowerCase()}`}>
+                      {secondaryElement}
                     </span>
                   </div>
                 </>
@@ -122,7 +302,7 @@ function DisplayWizards({ descriptions, apiBaseUrl, onReset, onBeginBattle = () 
               )}
             </header>
 
-            {stats && (
+            {displayStats && (
               <section className="wizard-stats">
                 {STAT_CONFIG.map(({ key, label: statLabel, color }) => (
                   <div key={key} className="stat-row">
@@ -131,7 +311,7 @@ function DisplayWizards({ descriptions, apiBaseUrl, onReset, onBeginBattle = () 
                       <div
                         className="stat-meter__fill"
                         style={{
-                          width: `${Math.min(Math.max(stats[key], 0), 1) * 100}%`,
+                          width: `${Math.min(Math.max(displayStats?.[key] ?? 0, 0), 1) * 100}%`,
                           backgroundColor: color,
                         }}
                       />
@@ -141,32 +321,62 @@ function DisplayWizards({ descriptions, apiBaseUrl, onReset, onBeginBattle = () 
               </section>
             )}
 
-            {spells && (
+            {actionsToShow.length > 0 && (
               <section className="wizard-spells">
-                <h4 className="summary-subtitle">Spells</h4>
-                <ul className="spell-list">
-                  {spells.map((spell) => (
-                    <li key={spell.name} className="spell-list__item">
-                      {spell.name}
-                    </li>
-                  ))}
-                </ul>
+                <h4 className="summary-subtitle">Actions</h4>
+                <div className="spell-cards">
+                  {actionsToShow.map(({ card }, index) => {
+                    const cardClassName = getActionCardClass(card);
+
+                    if (!card) {
+                      return null;
+                    }
+
+                    const accuracyLabel = formatAccuracy(card.accuracy);
+                    const manaCostLabel = `🔮 ${card.mana_cost ?? "?"}`;
+                    const description = card.description ?? "";
+                    const elementLabel = card.element ?? null;
+                    const elementClass = elementLabel
+                      ? `element-pill element-${String(card.element ?? "generic").toLowerCase()}`
+                      : null;
+                    const spellToneClass =
+                      cardClassName === "spell-card-spell" && index < 4
+                        ? `spell-card-spell-${index}`
+                        : "";
+
+                    return (
+                      <div
+                        key={`${card.name}-${index}`}
+                        className={`spell-card ${cardClassName} ${spellToneClass}`.trim()}
+                      >
+                        <div className="spell-card__row spell-card__row--primary">
+                          {elementClass && <span className={elementClass}>{elementLabel}</span>}
+                          <span className="spell-card__name">{card.name}</span>
+                          {description && (
+                            <span className="spell-card__description"><em>{description}</em></span>
+                          )}
+                        </div>
+                        <div className="spell-card__row spell-card__row--meta">
+                          <span className="spell-card__meta">{accuracyLabel}</span>
+                          <span className="spell-card__meta">{manaCostLabel}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </section>
             )}
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
 
       <div className="wizard-footer-actions">
-        <button className="prompt-button button-outline" type="button" onClick={onReset}>
+        <button className="prompt-button button-outline prompt-button--full" type="button" onClick={onReset}>
           Start Over
         </button>
-        {allComplete && (
-          <button className="prompt-button" type="button" onClick={onBeginBattle}>
-            Begin Battle
-          </button>
-        )}
       </div>
+
     </section>
   );
 }

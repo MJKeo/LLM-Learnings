@@ -72,6 +72,18 @@ class Heal extends Action {
   action_target() {
     return ActionTarget.SELF;
   }
+
+  display_card() {
+    const [minVal, maxVal] = this.range();
+    return {
+      type: "HEAL",
+      element: null,
+      name: "Heal",
+      description: `Restores ${minVal}-${maxVal} health.`,
+      accuracy: this.accuracy,
+      mana_cost: this.mana_cost(),
+    };
+  }
 }
 
 export default Heal;

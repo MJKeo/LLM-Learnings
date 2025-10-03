@@ -63,6 +63,20 @@ class Defend extends Action {
   action_target() {
     return ActionTarget.SELF;
   }
+
+  display_card() {
+    const strengths = this.element.strengths.join(", ");
+    const weaknesses = this.element.weaknesses.join(", ");
+    const description = `Raises a ${this.element.display_name} shield. Strong vs ${strengths}. Weak vs ${weaknesses}.`;
+    return {
+      type: "DEFENSE",
+      element: this.element.name,
+      name: `${this.element.display_name} Defense`,
+      description,
+      accuracy: this.accuracy,
+      mana_cost: this.mana_cost(),
+    };
+  }
 }
 
 export default Defend;
