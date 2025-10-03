@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GameState } from "./classes/gameState";
 import combatSystemPrompt from "./prompts/prompts";
+import BattleLogMessageType from "./enums/battleLogMessageType";
+import ActionType from "./enums/actionType";
+import SpellType from "./enums/spellType";
 
 const formatActions = (wizard, currentMana) => {
   if (!wizard) {
@@ -242,7 +245,7 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
       const enemyState = currentState.player_states?.[1 - actingIndex];
 
       if (!actingState || !enemyState) {
-        appendToLog("Invalid game state");
+        appendToLog({ type: BattleLogMessageType.ERROR, message: "Invalid game state" });
         return;
       }
 
@@ -250,7 +253,7 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
         actingState.player?.wizard?.affordable_actions?.(actingState.current_mana ?? 0) ?? [];
 
       if (!validActions.length) {
-        appendToLog("No valid actions available. Skipping turn.");
+        appendToLog({ type: BattleLogMessageType.ERROR, message: "No valid actions available. Skipping turn." });
 
         const manaBefore = actingIndex === 1
           ? currentState.player_states.map((state) => state.current_mana)
@@ -262,7 +265,7 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
         if (actingIndex === 1 && manaBefore) {
           const manaGains = updatedStates.map((state, idx) => Math.max(0, state.current_mana - manaBefore[idx]));
           appendToLog(
-            `End turn ${turnRef.current}, ${updatedStates[0].player.wizard.name} gets ${manaGains[0]} mana, ${updatedStates[1].player.wizard.name} gets ${manaGains[1]} mana`
+            { type: BattleLogMessageType.TURN_END, message: `End turn ${turnRef.current}, ${updatedStates[0].player.wizard.name} gains ${manaGains[0]} mana, ${updatedStates[1].player.wizard.name} gains ${manaGains[1]} mana` }
           );
         }
 
@@ -275,7 +278,7 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
         if (winnerAfterSkip) {
           winnerRef.current = winnerAfterSkip;
           setWinner(winnerAfterSkip);
-          appendToLog(`${winnerAfterSkip.name} wins!`);
+          appendToLog({ type: BattleLogMessageType.WINNER, message: `${winnerAfterSkip.name} wins!` });
           return;
         }
 
@@ -313,13 +316,13 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
           typeof rawAction === "number" ? rawAction : Number.parseInt(rawAction, 10);
 
         if (!Number.isFinite(parsedIndex)) {
-          appendToLog(`Invalid action index returned: ${JSON.stringify(data)}`);
+          appendToLog({ type: BattleLogMessageType.ERROR, message:`Invalid action index returned: ${JSON.stringify(data)}`});
           return;
         }
 
         const adjustedIndex = parsedIndex - 1;
         if (adjustedIndex < 0 || adjustedIndex >= validActions.length) {
-          appendToLog(`Action index ${parsedIndex} is out of bounds for ${validActions.length} actions`);
+          appendToLog({ type: BattleLogMessageType.ERROR, message: `Action index ${parsedIndex} is out of bounds for ${validActions.length} actions` });
           return;
         }
 
@@ -341,7 +344,7 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
           return;
         }
 
-        appendToLog(`Error during action generation: ${String(error)}`);
+        appendToLog({ type: BattleLogMessageType.ERROR, message: `Error during action generation: ${String(error)}` });
       } finally {
         if (controllerRef.current === controller) {
           controllerRef.current = null;
@@ -377,7 +380,7 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
 
       try {
         if (actionData.actingIndex === 0) {
-          appendToLog(`=== Turn ${actionData.turn} ===`);
+          appendToLog({ type: BattleLogMessageType.TURN_START, message: `Turn ${actionData.turn}` });
         }
 
         const announcement =
@@ -385,14 +388,37 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
 
         setPlayerStates([...currentState.player_states]);
 
-        appendToLog(`${announcement}\n`);
+        var action_emoji = "🪄";
+        console.log(actionData.selectedAction.action_type);
+        switch (actionData.selectedAction.action_type.name) {
+          case "HEAL":
+            action_emoji = "🍃";
+            break;
+          case "DEFEND":
+            action_emoji = "🛡️";
+            break;
+          case "CAST_SPELL":
+            switch(actionData.selectedAction.spell_type) {
+                case SpellType.DAMAGE:
+                    action_emoji = "💥";
+                    break;
+                case SpellType.BUFF:
+                    action_emoji = "📈";
+                    break;
+                case SpellType.DEBUFF:
+                    action_emoji = "📉";
+                    break;
+            }
+            break;
+        }
+        appendToLog({ type: BattleLogMessageType.PLAYER_ACTION, message: `${action_emoji} ${announcement}\n` });
 
         const winnerAfterAction = currentState.get_winner?.();
         if (winnerAfterAction) {
           winnerRef.current = winnerAfterAction;
           continueBattle = false;
           setWinner(winnerAfterAction);
-          appendToLog(`${winnerAfterAction.name} wins!`);
+          appendToLog({ type: BattleLogMessageType.WINNER, message: `${winnerAfterAction.name} wins!` });
         } else {
           actingIndexRef.current = 1 - actionData.actingIndex;
           if (actingIndexRef.current === 0) {
@@ -402,14 +428,14 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
             setPlayerStates(updatedStates);
             const manaGains = updatedStates.map((state, idx) => Math.max(0, state.current_mana - manaBefore[idx]));
             appendToLog(
-              `End turn ${actionData.turn}, ${updatedStates[0].player.wizard.name} gets ${manaGains[0]} mana, ${updatedStates[1].player.wizard.name} gets ${manaGains[1]} mana`
+              { type: BattleLogMessageType.TURN_END, message: `End turn ${actionData.turn}, ${updatedStates[0].player.wizard.name} gains ${manaGains[0]} mana, ${updatedStates[1].player.wizard.name} gains ${manaGains[1]} mana` }
             );
             turnRef.current = actionData.turn + 1;
           }
         }
       } catch (error) {
         continueBattle = false;
-        appendToLog(`Action failed: ${String(error)}`);
+        appendToLog({ type: BattleLogMessageType.ERROR, message: `Action failed: ${String(error)}` });
       } finally {
         setIsExecutingAction(false);
         isExecutingActionRef.current = false;
@@ -578,17 +604,38 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
           {autoProgress && isFetchingAction && generatingWizardName && (
             <p className="battle-log__status">{`Generating ${generatingWizardName}'s move...`}</p>
           )}
-          {winner && <p className="battle-log__winner">Winner: {winner.name}</p>}
           {battleLog.length === 0 ? (
             <p className="battle-log__empty">
               {isFetchingAction ? "Resolving first move..." : "Waiting for battle events..."}
             </p>
           ) : (
-            battleLog.map((entry, index) => (
-                <div key={index} className="battle-log__entry">
-                <pre className="api-result__pre">{entry}</pre>
-              </div>
-            ))
+            battleLog.map((entry, index) => {
+
+                var entryClass = "battle-log__entry";
+                switch (entry.type) {
+                    case BattleLogMessageType.PLAYER_ACTION:
+                        entryClass = "battle-log__entry";
+                        break;
+                    case BattleLogMessageType.WINNER:
+                        entryClass = "battle-log__entry--WINNER";
+                        break;
+                    case BattleLogMessageType.TURN_START:
+                        entryClass = "battle-log__entry--turn-start";
+                        break;
+                    case BattleLogMessageType.TURN_END:
+                        entryClass = "battle-log__entry--turn-end";
+                        break;
+                    case BattleLogMessageType.ERROR:
+                        entryClass = "battle-log__entry--error";
+                        break;
+                }
+
+              return (
+                <div key={index}>
+                  <h1 className={entryClass}>{entry.message}</h1>
+                </div>
+              );
+            })
           )}
         </div>
       </section>

@@ -38,8 +38,8 @@ INPUT YOU WILL RECEIVE (single user message)
 
 STYLE BIAS (must follow)
 - Act in character with "${wizard.combat_style}".
-- Ultra-aggressive? Prefer DAMAGE over HEAL even if not strictly optimal (unless KO is imminent).
 - Patient/control? Prefer setup (BUFF/DEBUFF/DEFEND) before committing to DAMAGE.
+- If you are low on health you MUST HEAL
 
 CHOICE RULES (concise)
 1) Legality: Pick only an action you can afford (mana) and that exists in the list.
@@ -49,7 +49,7 @@ CHOICE RULES (concise)
    - FIRST: proactive—secure tempo (opening BUFF/DEBUFF/strong DAMAGE fits style).
    - SECOND: expect impact before you resolve—DEFEND or safer options gain value if big hit is likely.
 5) State checks:
-   - Low HP: HEAL or DEFEND if consistent with style; ultra-aggressive still leans DAMAGE unless near certain KO.
+   - Low HP: HEAL; ultra-aggressive still leans DAMAGE unless near certain KO.
    - Redundant effects: avoid stacking the same BUFF/DEBUFF if duration remains.
 6) Mana tempo: If a higher-impact play is enabled next round, consider a setup action now (per style).
 7) Tie-breakers: prefer higher expected impact (effect * accuracy); if close, lower mana cost; if still tied, pick the earliest index.

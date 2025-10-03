@@ -411,7 +411,7 @@ function DisplayWizards({
                     return (
                       <div
                         key={`${card.name}-${index}`}
-                        className={`spell-card ${cardClassName} ${spellToneClass}`.trim()}
+                        className={`spell-card spell-card--static ${cardClassName} ${spellToneClass}`.trim()}
                       >
                         <div className="spell-card__row spell-card__row--primary">
                           <div className="spell-card__primary-left">
@@ -424,7 +424,7 @@ function DisplayWizards({
                             <span className="spell-card__meta">{manaCostLabel}</span>
                           </div>
                         </div>
-                        <div className="spell-card__row spell-card__row--description">
+                        <div className="spell-card__row spell-card__row--description spell-card__row--description--static">
                           {description && (
                             <span className="spell-card__description"><em>{description}</em></span>
                           )}
@@ -441,6 +441,17 @@ function DisplayWizards({
       </div>
 
       <div className="wizard-footer-actions">
+        {allComplete && (
+          <button
+            className="prompt-button prompt-button--full"
+            type="button"
+            onClick={onBeginBattle}
+            disabled={!(playerOneWizard && playerTwoWizard)}
+            title={playerOneWizard && playerTwoWizard ? "" : "Both wizards must finish loading"}
+          >
+            Begin Battle
+          </button>
+        )}
         <button className="prompt-button button-outline prompt-button--full" type="button" onClick={onReset}>
           Start Over
         </button>

@@ -453,13 +453,29 @@
   transition: max-height 0.25s ease, opacity 0.25s ease;
 }
 
+.spell-card__row--description--static,
+.spell-card--static .spell-card__row--description {
+  max-height: none;
+  opacity: 1;
+  overflow: visible;
+}
+
 .spell-card:hover .spell-card__row--description {
   max-height: 200px;
   opacity: 1;
 }
 
+.spell-card--static:hover .spell-card__row--description {
+  max-height: none;
+  opacity: 1;
+}
+
 .spell-card:hover {
   padding-bottom: 16px;
+}
+
+.spell-card--static:hover {
+  padding-bottom: 10px;
 }
 
 .spell-card-heal {
@@ -667,4 +683,38 @@
   box-shadow: none;
   transform: none;
   padding: 14px 16px;
+}
+
+.battle-log__entry {
+  font-weight: 400;
+  font-size: 1rem;
+  padding-block: 0px;
+  margin-bottom: 0;
+  margin-top: 6px;
+}
+
+.battle-log__entry--winner {
+  font-weight: 600;
+  font-size: 1.2rem;
+  padding-block: 8px;
+}
+
+.battle-log__entry--turn-start {
+  font-weight: 700;
+  font-size: 1.4rem;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+.battle-log__entry--turn-end {
+  font-weight: 200;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: #bebebe;
+}
+
+.battle-log__entry--error {
+  font-size: 1rem;
+  padding-block: 8px;
+  color: #ff8c8c;
 }
