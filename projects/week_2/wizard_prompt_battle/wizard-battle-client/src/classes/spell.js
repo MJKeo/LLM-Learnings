@@ -144,12 +144,24 @@ class Spell extends Action {
     }
   }
 
+  display_range() {
+    const [minVal, maxVal] = this.range();
+    switch (this.spell_type) {
+      case SpellType.DAMAGE:
+        return `${minVal}-${maxVal}`;
+      case SpellType.BUFF:
+      case SpellType.DEBUFF:
+        return `${(minVal * 100).toFixed(1)}-${(maxVal * 100).toFixed(1)}%`;
+    }
+  }
+
   display_card() {
     return {
       type: this.spell_type.name,
       element: this.element.name,
+      range: this.display_range(),
       name: this.name,
-      description: this.#spell_effect(),
+      description: this.description,
       accuracy: this.accuracy,
       mana_cost: this.mana_cost(),
     };

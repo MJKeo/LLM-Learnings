@@ -54,13 +54,13 @@ class GameState {
 
   change_mana(player, delta) {
     const state = this.player_states[player.id];
-    state.current_mana = Math.max(0, state.current_mana + delta);
+    state.current_mana = Math.max(0, Math.min(25, state.current_mana + delta));
     return state.current_mana;
   }
 
   set_mana(player, value) {
     const state = this.player_states[player.id];
-    state.current_mana = Math.max(0, value);
+    state.current_mana = Math.max(0, Math.min(25, value));
     return state.current_mana;
   }
 
@@ -101,9 +101,13 @@ class GameState {
     const actor_state = this.player_states[actor_index];
     const defender_state = this.player_states[1 - actor_index];
 
-    if (action.mana_cost() > actor_state.current_mana) {
+    const mana_cost = action.mana_cost();
+
+    if (mana_cost > actor_state.current_mana) {
       throw new Error("Not enough mana to perform action");
     }
+
+    actor_state.current_mana = Math.max(0, actor_state.current_mana - mana_cost);
 
     const result = action.perform_action(randomFn);
 
@@ -113,7 +117,6 @@ class GameState {
       return action.failure_announcement(actor_state.player.wizard);
     }
 
-    actor_state.current_mana = Math.max(0, actor_state.current_mana - action.mana_cost());
     let final_action_value = result.value;
 
     switch (result.action_type) {
@@ -276,7 +279,10 @@ class GameState {
 
   increment_mana() {
     this.player_states.forEach((state) => {
-      state.current_mana += state.player.wizard.mana_per_round();
+      state.current_mana = Math.max(
+        0,
+        Math.min(25, state.current_mana + state.player.wizard.mana_per_round())
+      );
     });
   }
 
@@ -297,6 +303,65 @@ class GameState {
     }
 
     return lines.join("\n");
+  }
+
+  battleSnapshot(actingWizardIndex) {
+    if (typeof actingWizardIndex !== "number" || ![0, 1].includes(actingWizardIndex)) {
+      throw new Error("battleSnapshot requires actingWizardIndex 0 or 1");
+    }
+
+    if (this.player_states.length < 2) {
+      throw new Error("GameState is not initialized");
+    }
+
+    const actingState = this.player_states[actingWizardIndex];
+    const enemyState = this.player_states[1 - actingWizardIndex];
+
+    const formatActions = (actions, use_numbers = false) => {
+      if (!actions?.length) {
+        return "  (none)";
+      }
+      return actions
+        .map((action, idx) => {
+          const overview = action.overview();
+          return `${use_numbers ? idx + 1 : ""}- ${Array.isArray(overview) ? overview.join(" ") : overview}`;
+        })
+        .join("\n");
+    };
+
+    const actingActions = formatActions(
+      actingState.player.wizard.affordable_actions(actingState.current_mana), true
+    );
+    const enemyActions = formatActions(
+      enemyState.player.wizard.affordable_actions(enemyState.current_mana)
+    );
+
+    const actingEffects = actingState.active_effects?.length
+      ? actingState.active_effects.map((effect) => effect.toString()).join(", ")
+      : "(none)";
+    const enemyEffects = enemyState.active_effects?.length
+      ? enemyState.active_effects.map((effect) => effect.toString()).join(", ")
+      : "(none)";
+
+    return `Your State:
+- Health: ${actingState.current_health}/${actingState.max_health}
+- Mana: ${actingState.current_mana}
+- Active Effects:
+    ${actingEffects}
+
+Enemy State:
+- Health: ${enemyState.current_health}/${enemyState.max_health}
+- Mana: ${enemyState.current_mana}
+- Active Effects:
+    ${enemyEffects}
+
+Enemy Available Actions:
+${enemyActions || "  (none)"}
+
+Choose ONE of the following actions to take:
+${actingActions || "  (none)"}
+
+Make sure to follow your combat style: ${actingState.player.wizard.combat_style}`;
   }
 }
 

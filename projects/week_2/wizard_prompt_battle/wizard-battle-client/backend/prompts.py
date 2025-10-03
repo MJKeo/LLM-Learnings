@@ -210,12 +210,21 @@ Spell Composition (continued):
 - (aggressive, impulsive, ferocious, explosive, hot-headed, reckless) means more damage spells
 - (protective, disciplined, resilient, empowering, courageous, enduring) means more buff spells
 - (cunning, deceptive, corrupting, parasitic, manipulative, withering) means more debuff spells
+- ALWAYS include at least 1 damage spell
 
 Additional Guidelines:
 - Descriptions must be distinct and concrete; no stat talk—describe magical method (e.g., “splits lightning to spear foes with forking bolts”).
 - Descriptions and names should match the spell type's behavior (ex. a damage spell that "disorients" the enemy doesn't make sense)
 
-Examples
+Invalid Example (no damage spells):
+[
+  {"name":"Cut the Queen","description":"Flicks a razor-edged card that slices with a whisper","spell_type":"BUFF","element":"MYTH","strength":0.30},
+  {"name":"Stacked Deck","description":"Palms phantom cards that subtly weight luck in your favor","spell_type":"BUFF","element":"MYTH","strength":0.55},
+  {"name":"False Tell","description":"Plants a convincing feint that sours the foe's timing","spell_type":"DEBUFF","element":"BALANCE","strength":0.72},
+  {"name":"House Edge","description":"Tilts the table itself until every move favors you","spell_type":"BUFF","element":"BALANCE","strength":0.88}
+]
+
+Valid Examples
 
 Wizard description: "A volcano-red sports car tearing down a midnight highway"
 Wizard stats:

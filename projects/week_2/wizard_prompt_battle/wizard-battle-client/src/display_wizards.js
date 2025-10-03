@@ -44,6 +44,34 @@ const formatAccuracy = (accuracy) => {
   return `🎯 ${Math.round(accuracy * 100)}%`;
 };
 
+const formatRange = (card) => {
+  if (!card) {
+    return "?";
+  }
+
+  const type = String(card.type ?? "").toUpperCase();
+
+  const emoji =
+    type === "HEAL"
+      ? "🍃"
+      : type === "DAMAGE"
+      ? "💥"
+      : type === "BUFF"
+      ? "📈"
+      : type === "DEBUFF"
+      ? "📉"
+      : type === "DEFENSE"
+      ? "🛡️"
+      : "";
+
+  if (typeof card.range === "string") {
+    return `${emoji} ${card.range}`.trim();
+  } else if (Array.isArray(card.range) && card.range.length === 2) {
+    const [min, max] = card.range;
+    return `${emoji} ${min}-${max}`.trim();
+  }
+};
+
 const STAT_CONFIG = [
   { key: "attack", label: "Attack", color: "#f87171" },
   { key: "defense", label: "Defense", color: "#60a5fa" },
@@ -106,19 +134,35 @@ function DisplayWizards({
             const statsData = await statsResponse.json();
             appendResult(label, { stats: statsData, description });
 
-            const spellsResponse = await fetch(`${apiBaseUrl}/generate_spells`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ description, stats: statsData }),
-            });
+            let spellsData = [];
+            let attempt = 0;
 
-            if (!spellsResponse.ok) {
-              throw new Error(`${label} spell generation failed with status ${spellsResponse.status}`);
+            while (attempt < 3) {
+              const spellsResponse = await fetch(`${apiBaseUrl}/generate_spells`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ description, stats: statsData }),
+              });
+
+              if (!spellsResponse.ok) {
+                throw new Error(`${label} spell generation failed with status ${spellsResponse.status}`);
+              }
+
+              const maybeSpells = await spellsResponse.json();
+              if (Array.isArray(maybeSpells) && maybeSpells.length >= 4) {
+                spellsData = maybeSpells;
+                break;
+              }
+
+              attempt += 1;
+
+              if (attempt >= 3) {
+                throw new Error(`${label} spell generation returned fewer than 4 spells after ${attempt} attempts`);
+              }
             }
 
-            const spellsData = await spellsResponse.json();
             let wizardInstance = null;
             try {
               const spellInstances = spellsData.map((spell) =>
@@ -228,14 +272,33 @@ function DisplayWizards({
 
       <div className={`wizard-actions-header${allComplete ? " wizard-actions-header--complete" : ""}`}>
         {allComplete && (
-          <button className="prompt-button" type="button" onClick={onBeginBattle}>
+          <button
+            className="prompt-button"
+            type="button"
+            onClick={onBeginBattle}
+            disabled={!(playerOneWizard && playerTwoWizard)}
+            title={playerOneWizard && playerTwoWizard ? "" : "Both wizards must finish loading"}
+          >
             Begin Battle
           </button>
         )}
       </div>
 
       <div className="wizard-grid">
-        {results.map(({ label, stats, spells, wizard: localWizard }) => {
+        {["Player 1", "Player 2"].map((label) => {
+          const record = results.find((entry) => entry.label === label);
+          if (!record) {
+            return (
+              <article key={label} className="wizard-card">
+                <header className="wizard-header">
+                  <p className="wizard-label">{label}</p>
+                  <p className="loading-message">Awaiting wizard...</p>
+                </header>
+              </article>
+            );
+          }
+
+          const { stats, spells, wizard: localWizard } = record;
           const wizardFromProps = label === "Player 1" ? playerOneWizard : playerTwoWizard;
           const wizard = wizardFromProps ?? localWizard;
           const displayStats = wizard ?? stats;
@@ -323,7 +386,7 @@ function DisplayWizards({
 
             {actionsToShow.length > 0 && (
               <section className="wizard-spells">
-                <h4 className="summary-subtitle">Actions</h4>
+                <h4 className="summary-subtitle">Spells</h4>
                 <div className="spell-cards">
                   {actionsToShow.map(({ card }, index) => {
                     const cardClassName = getActionCardClass(card);
@@ -334,6 +397,7 @@ function DisplayWizards({
 
                     const accuracyLabel = formatAccuracy(card.accuracy);
                     const manaCostLabel = `🔮 ${card.mana_cost ?? "?"}`;
+                    const rangeLabel = formatRange(card);
                     const description = card.description ?? "";
                     const elementLabel = card.element ?? null;
                     const elementClass = elementLabel
@@ -350,15 +414,20 @@ function DisplayWizards({
                         className={`spell-card ${cardClassName} ${spellToneClass}`.trim()}
                       >
                         <div className="spell-card__row spell-card__row--primary">
-                          {elementClass && <span className={elementClass}>{elementLabel}</span>}
-                          <span className="spell-card__name">{card.name}</span>
+                          <div className="spell-card__primary-left">
+                            {elementClass && <span className={elementClass}>{elementLabel}</span>}
+                            <span className="spell-card__name">{card.name}</span>
+                          </div>
+                          <div className="spell-card__primary-right">
+                            <span className="spell-card__meta spell-card__meta--range">{rangeLabel}</span>
+                            <span className="spell-card__meta">{accuracyLabel}</span>
+                            <span className="spell-card__meta">{manaCostLabel}</span>
+                          </div>
+                        </div>
+                        <div className="spell-card__row spell-card__row--description">
                           {description && (
                             <span className="spell-card__description"><em>{description}</em></span>
                           )}
-                        </div>
-                        <div className="spell-card__row spell-card__row--meta">
-                          <span className="spell-card__meta">{accuracyLabel}</span>
-                          <span className="spell-card__meta">{manaCostLabel}</span>
                         </div>
                       </div>
                     );

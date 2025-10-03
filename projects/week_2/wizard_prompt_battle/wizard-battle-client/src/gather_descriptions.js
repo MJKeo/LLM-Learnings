@@ -26,6 +26,17 @@ function GatherDescriptions({ onComplete }) {
     onComplete(playerOneDraft.trim(), playerTwoDraft.trim());
   };
 
+  const handleKeyDown = (event, phaseKey) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      if (phaseKey === "player1") {
+        handlePlayerOneSubmit();
+      } else {
+        handlePlayerTwoSubmit();
+      }
+    }
+  };
+
   return (
     <div className="gather-wrapper">
       <h1 className="title">Wizard Battle</h1>
@@ -40,6 +51,7 @@ function GatherDescriptions({ onComplete }) {
             className="prompt-input"
             value={playerOneDraft}
             onChange={(event) => setPlayerOneDraft(event.target.value)}
+            onKeyDown={(event) => handleKeyDown(event, "player1")}
             placeholder="Describe your wizard..."
           />
           <button className="prompt-button" onClick={handlePlayerOneSubmit}>
@@ -59,6 +71,7 @@ function GatherDescriptions({ onComplete }) {
             className="prompt-input"
             value={playerTwoDraft}
             onChange={(event) => setPlayerTwoDraft(event.target.value)}
+            onKeyDown={(event) => handleKeyDown(event, "player2")}
             placeholder="Describe your wizard..."
           />
           <button className="prompt-button" onClick={handlePlayerTwoSubmit}>

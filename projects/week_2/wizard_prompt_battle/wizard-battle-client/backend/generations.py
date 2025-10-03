@@ -3,7 +3,7 @@ import json
 import ollama
 
 from prompts import SPELL_GENERATOR_SYSTEM_PROMPT, WIZARD_GENERATOR_SYSTEM_PROMPT
-from schemas import SPELL_GENERATION_SCHEMA, WIZARD_GENERATION_SCHEMA
+from schemas import SPELL_GENERATION_SCHEMA, WIZARD_GENERATION_SCHEMA, ACTION_CHOICE_SCHEMA
 
 MODEL = "llama3.2"
 
@@ -19,7 +19,7 @@ def generate_wizard_stats(user_prompt: str) -> dict:
         messages=messages,
         format=WIZARD_GENERATION_SCHEMA,
         options={
-            "temperature": 0.85,
+            "temperature": 0.9,
             "num_predict": 128,
             "top_p": 0.9,
             "top_k": 40,
@@ -47,5 +47,25 @@ def generate_spells(description: str, stats: dict) -> list[dict]:
             "top_k": 40,
             "keep_alive": "10m",
         },
+    )
+    return json.loads(response.get("message", {}).get("content"))
+
+def generate_action_choice(system_prompt: str, 
+                            user_prompt: str) -> dict:
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+    response = ollama.chat(
+        model=MODEL,
+        messages=messages,
+        format=ACTION_CHOICE_SCHEMA,
+        options={
+            "temperature": 0.4,
+            "num_predict": 20,
+            "top_p": 0.9,
+            "top_k": 40,
+            "keep_alive": "10m"
+        }
     )
     return json.loads(response.get("message", {}).get("content"))

@@ -67,9 +67,10 @@ class Defend extends Action {
   display_card() {
     const strengths = this.element.strengths.join(", ");
     const weaknesses = this.element.weaknesses.join(", ");
-    const description = `Raises a ${this.element.display_name} shield. Strong vs ${strengths}. Weak vs ${weaknesses}.`;
+    const description = `Raises a ${this.element.display_name} shield (strong against ${strengths}, weak against ${weaknesses})`;
     return {
       type: "DEFENSE",
+      range: "0-50%",
       element: this.element.name,
       name: `${this.element.display_name} Defense`,
       description,

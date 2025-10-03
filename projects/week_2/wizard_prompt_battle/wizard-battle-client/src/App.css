@@ -69,7 +69,7 @@
 }
 
 .prompt-button {
-  margin-top: 20px;
+  margin-top: 16px;
   width: 100%;
   padding: 14px 16px;
   border-radius: 14px;
@@ -330,6 +330,31 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  position: relative;
+}
+
+.stat-row:hover .stat-meter {
+  height: 18px;
+}
+
+.stat-row:hover .stat-meter__fill {
+  height: 100%;
+}
+
+.stat-row:hover .stat-meter__value {
+  opacity: 1;
+}
+
+@keyframes statTooltipDelay {
+  0% {
+    opacity: 0;
+  }
+  99% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 .stat-label {
@@ -339,17 +364,32 @@
 }
 
 .stat-meter {
+  position: relative;
   flex: 1;
   height: 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
   overflow: hidden;
+  transition: height 0.3s ease;
 }
 
 .stat-meter__fill {
   height: 100%;
   border-radius: inherit;
-  transition: width 0.3s ease;
+  position: relative;
+  transition: width 0.3s ease, height 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.stat-meter__value {
+  opacity: 0;
+  margin-left: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  transition: opacity 0.2s ease;
 }
 
 .wizard-spells {
@@ -372,27 +412,54 @@
   border-radius: 12px;
   font-size: 0.92rem;
   color: rgba(15, 23, 42, 0.95);
+  transition: opacity 0.2s ease, filter 0.2s ease, padding 0.3s ease;
 }
 
 .spell-card__row {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px;
   align-items: baseline;
 }
 
-.spell-card__row--meta {
-  font-size: 0.85rem;
-  color: rgba(15, 23, 42, 0.7);
+.spell-card__primary-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .spell-card__name {
   font-weight: 600;
 }
 
-.spell-card__description {
+.spell-card__primary-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
   font-size: 0.85rem;
   color: rgba(15, 23, 42, 0.7);
+  white-space: nowrap;
+}
+
+.spell-card__row--description {
+  font-size: 0.85rem;
+  color: rgba(15, 23, 42, 0.7);
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.25s ease;
+}
+
+.spell-card:hover .spell-card__row--description {
+  max-height: 200px;
+  opacity: 1;
+}
+
+.spell-card:hover {
+  padding-bottom: 16px;
 }
 
 .spell-card-heal {
@@ -404,9 +471,13 @@
   color: rgba(255, 255, 255, 0.88);
 }
 
-.spell-card-heal .spell-card__row--meta,
+.spell-card-heal .spell-card__primary-right,
 .spell-card-heal .spell-card__meta {
   color: rgba(255, 255, 255, 0.85);
+}
+
+.spell-card-heal .spell-card__row--description {
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .spell-card-defense {
@@ -418,14 +489,23 @@
   color: rgba(255, 255, 255, 0.88);
 }
 
-.spell-card-defense .spell-card__row--meta,
+.spell-card-defense .spell-card__primary-right,
 .spell-card-defense .spell-card__meta {
   color: rgba(255, 255, 255, 0.85);
+}
+
+.spell-card-defense .spell-card__row--description {
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .spell-card-spell {
   background: #DCC9A1;
   color: rgba(37, 31, 27, 0.92);
+}
+
+.spell-card--unavailable {
+  opacity: 0.5;
+  filter: grayscale(35%);
 }
 
 .wizard-footer {
@@ -443,4 +523,148 @@
   font-style: italic;
   color: rgba(255, 255, 255, 0.72);
   padding-bottom: 12px;
+}
+
+.battle-layout {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 24px;
+  width: 100%;
+}
+
+@media (max-width: 1100px) {
+  .battle-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.battle-column {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 18px 40px rgba(7, 12, 29, 0.48);
+}
+
+.battle-column__header h2 {
+  margin: 0;
+  font-size: clamp(1.6rem, 2.4vw, 2.1rem);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.battle-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.battle-stats__circles {
+  display: flex;
+  justify-content: space-evenly;
+  flex-wrap: wrap;
+  width: 100%;
+  gap: 16px;
+}
+
+.battle-stats__circle-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.battle-stats__circle-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.battle-stats__resource-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.battle-stats__resource {
+  display: flex;
+  align-items: center;
+  gap: 0px;
+}
+
+.battle-stats__resource-label {
+  min-width: 64px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: capitalize;
+}
+
+.stat-horizontal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.stat-horizontal__meter {
+  flex: 1;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.stat-horizontal__fill {
+  height: 100%;
+  border-radius: inherit;
+  position: relative;
+}
+
+.stat-horizontal__value {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.battle-section-title {
+  margin: 0;
+  font-size: 1.1rem;
+  padding-bottom: 6px;
+  font-weight: 600;
+  color: rgba(203, 213, 225, 0.85);
+}
+
+.battle-section-title--spells {
+  padding-top: 16px;
+}
+
+.battle-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.battle-controls__primary,
+.battle-controls__secondary {
+  flex: 1 1 0;
+}
+
+.battle-controls__primary:disabled {
+  background: #4b5563 !important;
+  color: rgba(226, 232, 240, 0.8);
+  border: none;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+  padding: 14px 16px;
 }

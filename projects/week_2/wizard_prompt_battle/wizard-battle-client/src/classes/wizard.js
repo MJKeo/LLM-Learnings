@@ -97,9 +97,9 @@ class Wizard {
 
     const actions = [];
     actions.push(...sorted_spells);
-    actions.push(new Heal(this));
     actions.push(new Defend(this.primary_element));
     actions.push(new Defend(this.secondary_element));
+    actions.push(new Heal(this));
     return actions;
   }
 

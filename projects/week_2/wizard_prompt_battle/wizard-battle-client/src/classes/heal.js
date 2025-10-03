@@ -77,6 +77,7 @@ class Heal extends Action {
     const [minVal, maxVal] = this.range();
     return {
       type: "HEAL",
+      range: this.range(),
       element: null,
       name: "Heal",
       description: `Restores ${minVal}-${maxVal} health.`,

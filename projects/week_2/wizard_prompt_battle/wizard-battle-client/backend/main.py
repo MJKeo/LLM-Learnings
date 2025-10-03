@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from generations import generate_wizard_stats as generate_wizard_stats_from_description
 from generations import generate_spells as generate_spells_for_wizard
+from generations import generate_action_choice
 
 app = FastAPI(title="Wizard Prompt Battle API")
 
@@ -40,8 +41,17 @@ class WizardStatsModel(BaseModel):
     combat_style: str
 
 
+class ActionModel(BaseModel):
+    action: int
+
+
 class WizardDescriptionPayload(BaseModel):
     description: str = Field(..., min_length=1, description="Brief description of the wizard to generate")
+
+
+class ActionGenerationPayload(BaseModel):
+    system_prompt: str = Field(..., min_length=1)
+    user_prompt: str = Field(..., min_length=1)
 
 
 class SpellGenerationPayload(BaseModel):
@@ -73,6 +83,17 @@ async def generate_spells(payload: SpellGenerationPayload) -> List[SpellModel]:
         raise HTTPException(status_code=511, detail=f"Model generation failed: {exc}") from exc
 
     return [SpellModel(**spell) for spell in result]
+
+
+@app.post("/generate_action", response_model=ActionModel)
+async def generate_action(payload: ActionGenerationPayload) -> ActionModel:  # noqa: ARG001
+    try:
+        action = generate_action_choice(payload.system_prompt, payload.user_prompt)
+    except Exception as exc:  # noqa: BLE001
+        print(exc)
+        raise HTTPException(status_code=511, detail=f"Model generation failed: {exc}") from exc
+
+    return ActionModel(**action)
 
 
 def run() -> None:
