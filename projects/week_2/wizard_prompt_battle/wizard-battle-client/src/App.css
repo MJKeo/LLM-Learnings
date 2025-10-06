@@ -718,3 +718,13 @@
   padding-block: 8px;
   color: #ff8c8c;
 }
+
+.battle-stats__effects {
+  margin-top: 8px;
+}
+
+.battle-effects__list {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.9);
+}

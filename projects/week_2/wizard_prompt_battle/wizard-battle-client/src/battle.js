@@ -88,6 +88,47 @@ const formatActions = (wizard, currentMana) => {
   });
 };
 
+const formatActiveEffects = (wizardState) => {
+  const effects = wizardState.active_effects ?? [];
+  if (!effects.length) {
+    return [{ text: "(none)", title: "" }];
+  }
+
+  return effects.map((effect) => {
+    const rounds = effect.remaining_turns ?? effect.rounds_remaining ?? 0;
+    const type = String(effect.effect_type ?? effect.type ?? "").toUpperCase();
+    const sourceName = effect.source_name ?? effect.source ?? effect.name ?? "Effect";
+    if (type === "DEFENSE" || (effect.is_defense && typeof effect.is_defense === "boolean")) {
+      return {
+        text: `🛡️ ${effect.name ?? "Unknown"} (${rounds})`,
+        title: sourceName,
+      };
+    }
+
+    const effectValue = Number(effect.value ?? 0) || 0;
+    const percent = `${(Math.round(effectValue * 1000) / 10).toFixed(1)}%`;
+
+    if (type === "BUFF" || effect.is_buff) {
+      return {
+        text: `📈 ${percent} (${rounds})`,
+        title: sourceName,
+      };
+    }
+
+    if (type === "DEBUFF" || effect.is_debuff) {
+      return {
+        text: `📉 ${percent} (${rounds})`,
+        title: sourceName,
+      };
+    }
+
+    return {
+      text: `${effect.name ?? "Effect"} (${rounds})`,
+      title: sourceName,
+    };
+  });
+};
+
 const StatCircles = ({ current, max, color }) => {
   const clampedCurrent = Math.max(0, current);
   const clampedMax = Math.max(1, max);
@@ -155,6 +196,18 @@ const BattleColumn = ({ actions, wizardState }) => (
             <span className="battle-stats__resource-label">Mana</span>
             <StatCircles current={wizardState.current_mana} max={25} color="#a855f7" />
           </div>
+        </div>
+        <div className="battle-stats__effects">
+          <h4 className="battle-section-title">Active Effects</h4>
+          <p className="battle-effects__list">
+            {formatActiveEffects(wizardState)
+              .map(({ text, title }, index) => (
+                <span key={`${text}-${index}`} title={title}>
+                  {text}
+                  {index < (wizardState.active_effects?.length ?? 0) - 1 ? ", " : ""}
+                </span>
+              ))}
+          </p>
         </div>
         <div className="battle-stats__bars">
           <h4 className="battle-section-title">Stats</h4>
@@ -264,9 +317,10 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
 
         if (actingIndex === 1 && manaBefore) {
           const manaGains = updatedStates.map((state, idx) => Math.max(0, state.current_mana - manaBefore[idx]));
-          appendToLog(
-            { type: BattleLogMessageType.TURN_END, message: `End turn ${turnRef.current}, ${updatedStates[0].player.wizard.name} gains ${manaGains[0]} mana, ${updatedStates[1].player.wizard.name} gains ${manaGains[1]} mana` }
-          );
+          appendToLog({
+            type: BattleLogMessageType.TURN_END,
+            message: `End turn ${turnRef.current}, ${updatedStates[0].player.wizard.name} gets ${manaGains[0]} mana, ${updatedStates[1].player.wizard.name} gets ${manaGains[1]} mana\n`,
+          });
         }
 
         actingIndexRef.current = 1 - actingIndex;
@@ -427,9 +481,10 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
             const updatedStates = [...currentState.player_states];
             setPlayerStates(updatedStates);
             const manaGains = updatedStates.map((state, idx) => Math.max(0, state.current_mana - manaBefore[idx]));
-            appendToLog(
-              { type: BattleLogMessageType.TURN_END, message: `End turn ${actionData.turn}, ${updatedStates[0].player.wizard.name} gains ${manaGains[0]} mana, ${updatedStates[1].player.wizard.name} gains ${manaGains[1]} mana` }
-            );
+            appendToLog({
+              type: BattleLogMessageType.TURN_END,
+              message: `End turn ${actionData.turn}, ${updatedStates[0].player.wizard.name} gets ${manaGains[0]} mana, ${updatedStates[1].player.wizard.name} gets ${manaGains[1]} mana\n`,
+            });
             turnRef.current = actionData.turn + 1;
           }
         }
