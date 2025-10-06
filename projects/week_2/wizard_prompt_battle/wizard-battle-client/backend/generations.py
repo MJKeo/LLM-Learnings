@@ -19,11 +19,15 @@ def generate_wizard_stats(user_prompt: str) -> dict:
         messages=messages,
         format=WIZARD_GENERATION_SCHEMA,
         options={
-            "temperature": 0.9,
-            "num_predict": 128,
-            "top_p": 0.9,
+            "temperature": 0.7,        # lively but not chaotic
+            "top_p": 0.92,             # trims tail tokens while keeping variety
             "top_k": 40,
-            "num_ctx": 1400,
+            "min_p": 0.07,
+            "mirostat": 0,             # turn off for better schema reliability
+            "repeat_penalty": 1.1,     # reduce rambling / repeats
+            "repeat_last_n": 64,
+            "num_ctx": 2000,           # plenty for your system prompt + few-shots
+            "num_predict": 220,
             "keep_alive": "10m",
         },
     )

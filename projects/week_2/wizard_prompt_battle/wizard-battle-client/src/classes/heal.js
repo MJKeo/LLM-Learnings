@@ -47,8 +47,7 @@ class Heal extends Action {
   }
 
   mana_cost() {
-    const base = 3 * 2 ** (this.strength ** 1.15);
-    return Math.round(base);
+    return 3;
   }
 
   overview() {
