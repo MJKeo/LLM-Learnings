@@ -62,3 +62,28 @@ NO-REDUNDANT EFFECTS
 };
 
 export default combatSystemPrompt;
+
+// So an action has the following info:
+// 1- index
+// 2- type
+// 3- element_effectiveness
+// 4- effect_range (using calculated_damage)
+// 5- accuracy
+// 6- mana_cost
+// 7- is_redundant
+// 8- can_kill
+
+// Other Info:
+// You
+//   - hp + hp_max + hp_pct
+//   - mana + mana_regen
+//   - active_effects {SHIELD/BUFF/DEBUFF, element/effect, turns_remaining}
+//   - actions you can take this turn
+// Enemy
+//   - hp + hp_max + hp_pct
+//   - active_effects {SHIELD/BUFF/DEBUFF, element/effect, turns_remaining}
+// Overall Game State
+//   - danger_score
+//   - win_opportunity_score
+
+

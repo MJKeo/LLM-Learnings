@@ -32,7 +32,7 @@ SPELL_GENERATION_SCHEMA = {
             "element":{"type": "string", "enum": ["FIRE","ICE","STORM","LIFE","DEATH","MYTH","BALANCE"]},
             "strength":{"type": "number", "minimum": 0, "maximum": 1.0}
         },
-        "required": ["name","description","spell_type","element","strength","mana_cost"],
+        "required": ["name","description","spell_type","element","strength"],
         "additionalProperties": False
     }
 }

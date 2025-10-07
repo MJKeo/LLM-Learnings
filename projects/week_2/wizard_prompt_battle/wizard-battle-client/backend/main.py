@@ -56,7 +56,10 @@ class ActionGenerationPayload(BaseModel):
 
 class SpellGenerationPayload(BaseModel):
     description: str = Field(..., min_length=1)
-    stats: WizardStatsModel
+    name: str = Field(..., min_length=1)
+    primary_element: str = Field(..., min_length=1)
+    secondary_element: str = Field(..., min_length=1)
+    combat_style: str = Field(..., min_length=1)
 
 
 @app.get("/health")
@@ -77,7 +80,13 @@ async def generate_wizard_stats(payload: WizardDescriptionPayload) -> WizardStat
 @app.post("/generate_spells", response_model=List[SpellModel])
 async def generate_spells(payload: SpellGenerationPayload) -> List[SpellModel]:
     try:
-        result = generate_spells_for_wizard(payload.description, payload.stats.model_dump())
+        result = generate_spells_for_wizard(
+            payload.description,
+            payload.name,
+            payload.primary_element,
+            payload.secondary_element,
+            payload.combat_style,
+        )
     except Exception as exc:  # noqa: BLE001
         print(exc)
         raise HTTPException(status_code=511, detail=f"Model generation failed: {exc}") from exc

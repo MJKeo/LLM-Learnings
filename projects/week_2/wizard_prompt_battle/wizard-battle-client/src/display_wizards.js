@@ -143,7 +143,13 @@ function DisplayWizards({
                 headers: {
                   "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ description, stats: statsData }),
+                body: JSON.stringify({
+                  description,
+                  name: statsData.name,
+                  primary_element: statsData.primary_element,
+                  secondary_element: statsData.secondary_element,
+                  combat_style: statsData.combat_style,
+                }),
               });
 
               if (!spellsResponse.ok) {
