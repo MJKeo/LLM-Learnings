@@ -42,7 +42,8 @@ class WizardStatsModel(BaseModel):
 
 
 class ActionModel(BaseModel):
-    action: int
+    action_index: int
+    justification: str
 
 
 class WizardDescriptionPayload(BaseModel):

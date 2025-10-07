@@ -30,6 +30,10 @@ class Action {
     throw new Error("range must be implemented by subclasses");
   }
 
+  compact_effect() {
+    throw new Error("compact effect must be implemented by subclasses");
+  }
+
   mana_cost() {
     throw new Error("mana_cost must be implemented by subclasses");
   }

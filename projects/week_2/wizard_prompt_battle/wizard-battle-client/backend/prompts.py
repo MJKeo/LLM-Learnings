@@ -238,6 +238,12 @@ Global rules (strict):
 - Type integrity: the text must match the type (DAMAGE hurts, BUFF empowers self, DEBUFF impairs foe). Don't mix behaviors.
 - Strength variety: include a spread of weak/medium/strong spells;
 
+Spell Type Distribution:
+- Always include ≥1 DAMAGE spell.
+- More aggressive = more damage spells (up to 4)
+- More defensive/nurturing = more buff spells
+- Trickery/evil = more debuff spells
+
 Additional Guidelines:
 - DO NOT INCLUDE HEALING SPELLS
 - DO NOT INCLUDE SHIELD SPELLS

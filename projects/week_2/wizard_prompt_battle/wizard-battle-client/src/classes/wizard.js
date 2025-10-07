@@ -1,5 +1,6 @@
 import Heal from "./heal";
 import Defend from "./defend";
+import Pass from "./pass";
 import Spell from "./spell";
 import Element from "../enums/element";
 import SpellType from "../enums/spellType";
@@ -100,6 +101,7 @@ class Wizard {
     actions.push(new Defend(this.primary_element));
     actions.push(new Defend(this.secondary_element));
     actions.push(new Heal(this));
+    actions.push(new Pass());
     return actions;
   }
 

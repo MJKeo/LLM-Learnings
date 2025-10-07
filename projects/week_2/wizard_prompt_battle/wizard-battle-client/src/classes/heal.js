@@ -27,6 +27,11 @@ class Heal extends Action {
     return 150 * (5 / 3) ** (this.strength ** 1.8);
   }
 
+  compact_effect() {
+    const [minVal, maxVal] = this.range();
+    return `Restore ${minVal}-${maxVal} health`;
+  }
+
   perform_action_subclass(randomFn = Math.random) {
     const healingBase = this.#healing_base();
     const healingAmount = Math.max(0, Math.round(vary(healingBase, this.variance, randomFn)));
@@ -47,7 +52,7 @@ class Heal extends Action {
   }
 
   mana_cost() {
-    return 3;
+    return 5;
   }
 
   overview() {

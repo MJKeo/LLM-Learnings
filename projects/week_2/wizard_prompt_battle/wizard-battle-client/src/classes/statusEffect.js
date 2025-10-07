@@ -23,6 +23,11 @@ class StatusEffect {
   toString() {
     return `${this.name} [${this.effect_type.name}] value=${this.value} turns=${this.remaining_turns}`;
   }
+
+  compact_string() {
+    const value = (this.effect_type === StatusEffectType.DEFENSE) ? `"${this.name}"` : this.value;
+    return `{"type":"${this.effect_type.name}","effect":${value},"turns_left":${this.remaining_turns}}`;
+  }
 }
 
 export default StatusEffect;

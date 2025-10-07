@@ -74,7 +74,7 @@ def generate_action_choice(system_prompt: str,
         format=ACTION_CHOICE_SCHEMA,
         options={
             "temperature": 0.4,
-            "num_predict": 20,
+            "num_predict": 200,
             "top_p": 0.9,
             "top_k": 40,
             "keep_alive": "10m"

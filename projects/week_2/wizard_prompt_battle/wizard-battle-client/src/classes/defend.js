@@ -36,7 +36,7 @@ class Defend extends Action {
   }
 
   mana_cost() {
-    return 0;
+    return 2;
   }
 
   overview() {
@@ -62,6 +62,10 @@ class Defend extends Action {
 
   action_target() {
     return ActionTarget.SELF;
+  }
+
+  compact_effect() {
+    return `Reduces incoming damage`;
   }
 
   display_card() {

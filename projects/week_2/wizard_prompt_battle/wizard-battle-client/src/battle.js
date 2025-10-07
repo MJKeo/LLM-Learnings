@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GameState } from "./classes/gameState";
-import combatSystemPrompt from "./prompts/prompts";
+import { combatSystemPrompt, combatSystemPromptV2, combatUserPromptV2 } from "./prompts/prompts";
 import BattleLogMessageType from "./enums/battleLogMessageType";
 import ActionType from "./enums/actionType";
 import SpellType from "./enums/spellType";
@@ -302,8 +302,7 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
         return;
       }
 
-      const validActions =
-        actingState.player?.wizard?.affordable_actions?.(actingState.current_mana ?? 0) ?? [];
+      const validActions = currentState.affordable_actions(actingIndex) ?? [];
 
       if (!validActions.length) {
         appendToLog({ type: BattleLogMessageType.ERROR, message: "No valid actions available. Skipping turn." });
@@ -349,12 +348,16 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
       controllerRef.current = controller;
 
       try {
+        const battleContext = currentState.compact_battle_context(actingIndex);
+        const system_prompt = combatSystemPromptV2(actingState.player.wizard)
+        const user_prompt = combatUserPromptV2(actingState.player.wizard, battleContext['actor_info'], battleContext['enemy_info'])
+        console.log(user_prompt)
         const response = await fetch(`${baseUrlRef.current}/generate_action`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            system_prompt: combatSystemPrompt(actingState),
-            user_prompt: currentState.battleSnapshot(actingIndex),
+            system_prompt: system_prompt,
+            user_prompt: user_prompt,
           }),
           signal: controller.signal,
         });
@@ -365,7 +368,8 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
         }
 
         const data = await response.json();
-        const rawAction = data?.action;
+        console.log(data['justification'])
+        const rawAction = data?.action_index;
         const parsedIndex =
           typeof rawAction === "number" ? rawAction : Number.parseInt(rawAction, 10);
 
@@ -443,7 +447,6 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
         setPlayerStates([...currentState.player_states]);
 
         var action_emoji = "🪄";
-        console.log(actionData.selectedAction.action_type);
         switch (actionData.selectedAction.action_type.name) {
           case "HEAL":
             action_emoji = "🍃";
@@ -463,6 +466,9 @@ const Battle = ({ playerOneWizard, playerTwoWizard, onReset, apiBaseUrl }) => {
                     action_emoji = "📉";
                     break;
             }
+            break;
+          case "PASS":
+            action_emoji = "✋";
             break;
         }
         appendToLog({ type: BattleLogMessageType.PLAYER_ACTION, message: `${action_emoji} ${announcement}\n` });

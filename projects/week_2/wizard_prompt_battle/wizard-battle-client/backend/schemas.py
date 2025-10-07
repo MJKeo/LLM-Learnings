@@ -40,11 +40,14 @@ SPELL_GENERATION_SCHEMA = {
 ACTION_CHOICE_SCHEMA = {
     "type": "object",
     "properties": {
-        "action": {
+        "action_index": {
             "type": "integer",
-            "minimum": 1   # ensures action > 0
+            "minimum": 0
         },
+        "justification": {
+            "type": "string"
+        }
     },
-    "required": ["action"],
+    "required": ["action_index", "justification"],
     "additionalProperties": False
 }

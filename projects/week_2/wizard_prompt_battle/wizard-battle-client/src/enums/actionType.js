@@ -7,6 +7,7 @@ class ActionType {
     CAST_SPELL: new ActionType("CAST_SPELL"),
     HEAL: new ActionType("HEAL"),
     DEFEND: new ActionType("DEFEND"),
+    PASS: new ActionType("PASS"),
   };
 
   static get CAST_SPELL() {
@@ -19,6 +20,10 @@ class ActionType {
 
   static get DEFEND() {
     return ActionType.#values.DEFEND;
+  }
+
+  static get PASS() {
+    return ActionType.#values.PASS;
   }
 
   static values() {

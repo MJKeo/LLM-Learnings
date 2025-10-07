@@ -88,6 +88,20 @@ class Spell extends Action {
     }
   }
 
+  compact_effect() {
+    const [minVal, maxVal] = this.range();
+    switch (this.spell_type) {
+      case SpellType.DAMAGE:
+        return `Deals ${minVal}-${maxVal} damage`;
+      case SpellType.BUFF:
+        return `Increase attack and defense by ${(100 * minVal).toFixed(1)}-${(100 * maxVal).toFixed(1)}%`;
+      case SpellType.DEBUFF:
+        return `Reduces enemy attack and defense by ${(100 * minVal).toFixed(1)}-${(100 * maxVal).toFixed(1)}%`;
+      default:
+        throw new Error(`Unhandled spell type: ${this.spell_type}`);
+    }
+  }
+
   perform_action_subclass(randomFn = Math.random) {
     const spell_value = this.#varied_spell_value(randomFn);
     const target = this.action_target();
@@ -109,8 +123,15 @@ class Spell extends Action {
   }
 
   mana_cost() {
-    const base = 3 * (10 / 3) ** (this.strength ** 1.15);
-    return Math.round(base);
+    switch (this.spell_type) {
+      case SpellType.DAMAGE:
+        return Math.round(3 * (10 / 3) ** (this.strength ** 1.15));
+      case SpellType.BUFF:
+      case SpellType.DEBUFF:
+        return Math.round(1 * (3.4) ** (this.strength ** 1.15));
+      default:
+        throw new Error(`Unhandled spell type: ${this.spell_type}`);
+    }
   }
 
   overview() {
